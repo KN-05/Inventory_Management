@@ -1,0 +1,23 @@
+# This repo has TWO apps, each with its own .gitignore:
+#   server/.gitignore  - node_modules/, .env
+#   client/.gitignore  - node_modules/, dist/, .env
+# This root file catches anything that could still slip through at the
+# repo root (OS/editor files, stray env files, logs).
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Env files anywhere in the repo
+.env
+.env.local
+*.env.local
+
+# Logs
+*.log
+npm-debug.log*
