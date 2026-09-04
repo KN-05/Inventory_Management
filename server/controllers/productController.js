@@ -6,6 +6,7 @@ const path = require('path');
 const asyncHandler = require('../utils/asyncHandler');
 const logActivity = require('../utils/logActivity');
 const { generateUniqueSku, generateUniqueBarcode } = require('../utils/generateProductCodes');
+const toCsv = require('../utils/toCsv');
 const Product = require('../models/Product');
 const StockAlert = require('../models/StockAlert');
 const StockMovement = require('../models/StockMovement');
@@ -318,7 +319,7 @@ const getProductStockMovements = asyncHandler(async (req, res) => {
 });
 
 // @desc   Bulk-import products from an uploaded CSV file
-// @route  POST /api/products/import
+// @route  POST /api/products/import?preview=true|false
 // @access Private (Admin + Manager, per IMPORTS_CREATE)
 //
 // PHASE 13: expects a multipart/form-data request with a single file field
@@ -333,11 +334,23 @@ const getProductStockMovements = asyncHandler(async (req, res) => {
 // one, it's auto-generated the same way the "Add Product" form does.
 // Every imported row also gets an auto-generated `barcode`, since there's
 // no barcode column in the CSV template at all.
+//
+// PHASE 9: added a PREVIEW step, per the spec's "Upload -> Validate ->
+// Preview -> Confirm -> Insert" flow. `?preview=true` runs every
+// validation check below (missing fields, bad numbers, unknown
+// category/supplier, duplicate SKUs - both within the file and against
+// the database) and reports totals/row-level reasons WITHOUT writing
+// anything to the database. The frontend re-sends the exact same file
+// with `?preview=false` once the person confirms, which then actually
+// creates the valid rows - so nothing is ever inserted without a person
+// having seen what would happen first.
 const importProducts = asyncHandler(async (req, res) => {
   if (!req.file) {
     res.status(400);
     throw new Error('No CSV file was uploaded');
   }
+
+  const isPreview = req.query.preview === 'true';
 
   let rows;
   try {
@@ -362,8 +375,9 @@ const importProducts = asyncHandler(async (req, res) => {
   const categoryByName = new Map(categories.map((c) => [c.name.toLowerCase(), c]));
   const supplierByName = new Map(suppliers.map((s) => [s.name.toLowerCase(), s]));
 
-  const results = { created: 0, failed: 0 };
+  const results = { created: 0, failed: 0, duplicates: 0 };
   const errors = [];
+  const preview = []; // only populated for ?preview=true - a few sample valid rows
   const skusSeenInThisFile = new Set(); // catch duplicate SKUs within the same CSV
 
   for (let i = 0; i < rows.length; i++) {
@@ -381,31 +395,31 @@ const importProducts = asyncHandler(async (req, res) => {
     // Validate required fields are present and sensible before touching the DB
     if (!name || !categoryName || !supplierName) {
       results.failed++;
-      errors.push({ row: rowNum, reason: 'Missing name, category, or supplier' });
+      errors.push({ row: rowNum, type: 'invalid', reason: 'Missing name, category, or supplier' });
       continue;
     }
     if (Number.isNaN(quantity) || quantity < 0) {
       results.failed++;
-      errors.push({ row: rowNum, reason: 'Quantity must be a number 0 or greater' });
+      errors.push({ row: rowNum, type: 'invalid', reason: 'Quantity must be a number 0 or greater' });
       continue;
     }
     if (Number.isNaN(price) || price < 0) {
       results.failed++;
-      errors.push({ row: rowNum, reason: 'Price must be a number 0 or greater' });
+      errors.push({ row: rowNum, type: 'invalid', reason: 'Price must be a number 0 or greater' });
       continue;
     }
 
     const category = categoryByName.get(categoryName.toLowerCase());
     if (!category) {
       results.failed++;
-      errors.push({ row: rowNum, reason: `Category "${categoryName}" does not exist` });
+      errors.push({ row: rowNum, type: 'invalid', reason: `Category "${categoryName}" does not exist` });
       continue;
     }
 
     const supplier = supplierByName.get(supplierName.toLowerCase());
     if (!supplier) {
       results.failed++;
-      errors.push({ row: rowNum, reason: `Supplier "${supplierName}" does not exist` });
+      errors.push({ row: rowNum, type: 'invalid', reason: `Supplier "${supplierName}" does not exist` });
       continue;
     }
 
@@ -413,7 +427,8 @@ const importProducts = asyncHandler(async (req, res) => {
     if (sku) {
       if (skusSeenInThisFile.has(sku)) {
         results.failed++;
-        errors.push({ row: rowNum, reason: `Duplicate SKU "${sku}" within this file` });
+        results.duplicates++;
+        errors.push({ row: rowNum, type: 'duplicate', reason: `Duplicate SKU "${sku}" within this file` });
         continue;
       }
 
@@ -421,12 +436,31 @@ const importProducts = asyncHandler(async (req, res) => {
       const existingProduct = await Product.findOne({ sku });
       if (existingProduct) {
         results.failed++;
-        errors.push({ row: rowNum, reason: `SKU "${sku}" already exists in the database` });
+        results.duplicates++;
+        errors.push({ row: rowNum, type: 'duplicate', reason: `SKU "${sku}" already exists in the database` });
         continue;
       }
-    } else {
+    } else if (!isPreview) {
+      // Only actually reserve a generated SKU when we're really about to
+      // insert - during preview we just show "(auto-generated)" so two
+      // back-to-back previews of the same file don't get different SKUs.
       // eslint-disable-next-line no-await-in-loop
       sku = await generateUniqueSku(category.name, name);
+    }
+
+    if (isPreview) {
+      preview.push({
+        row: rowNum,
+        name,
+        sku: sku || '(auto-generated)',
+        category: category.name,
+        supplier: supplier.name,
+        quantity,
+        price,
+      });
+      skusSeenInThisFile.add(sku || `__preview_${rowNum}`);
+      results.created++; // "would be created"
+      continue;
     }
 
     try {
@@ -447,8 +481,24 @@ const importProducts = asyncHandler(async (req, res) => {
       results.created++;
     } catch (err) {
       results.failed++;
-      errors.push({ row: rowNum, reason: err.message });
+      errors.push({ row: rowNum, type: 'invalid', reason: err.message });
     }
+  }
+
+  if (isPreview) {
+    // Nothing was written to the database - just report what WOULD happen.
+    return res.status(200).json({
+      success: true,
+      preview: true,
+      summary: {
+        totalRows: rows.length,
+        validRows: results.created,
+        invalidRows: results.failed - results.duplicates,
+        duplicateRows: results.duplicates,
+      },
+      sampleRows: preview.slice(0, 20), // enough to sanity-check without dumping huge files
+      errors,
+    });
   }
 
   // One summary activity log entry, not one per row - avoids flooding the
@@ -461,10 +511,50 @@ const importProducts = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
+    preview: false,
     message: `Import complete: ${results.created} created, ${results.failed} failed`,
-    summary: { totalRows: rows.length, ...results },
+    summary: {
+      totalRows: rows.length,
+      validRows: results.created,
+      invalidRows: results.failed - results.duplicates,
+      duplicateRows: results.duplicates,
+    },
     errors,
   });
+});
+
+// @desc   Export all products (i.e. the full Inventory) as a CSV file
+// @route  GET /api/products/export
+// @access Private (Admin + Manager + Staff, per PRODUCTS_VIEW)
+//
+// PHASE 9: this doubles as the spec's "Inventory" export - a Product IS
+// the inventory record (name, stock, threshold, status all live on it
+// already), so a separate "Inventory" export would just be a duplicate
+// of this one with a different filename. One export, two names.
+const exportProducts = asyncHandler(async (req, res) => {
+  const products = await Product.find()
+    .populate('category', 'name')
+    .populate('supplier', 'name')
+    .sort({ name: 1 })
+    .lean();
+
+  const csv = toCsv(products, [
+    { key: 'name', label: 'Name' },
+    { key: 'sku', label: 'SKU' },
+    { key: 'barcode', label: 'Barcode' },
+    { key: 'category.name', label: 'Category' },
+    { key: 'supplier.name', label: 'Supplier' },
+    { key: 'quantity', label: 'Quantity' },
+    { key: 'lowStockThreshold', label: 'Low Stock Threshold' },
+    { key: 'price', label: 'Price' },
+    { key: 'status', label: 'Status' },
+  ]);
+
+  await logActivity(req.user._id, `Exported ${products.length} product(s) to CSV`, 'product');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="products-export.csv"');
+  res.status(200).send(csv);
 });
 
 module.exports = {
@@ -478,4 +568,5 @@ module.exports = {
   decreaseStock,
   getProductStockMovements,
   importProducts,
+  exportProducts,
 };

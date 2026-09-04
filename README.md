@@ -30,7 +30,6 @@ inventory-management/
 │   ├── routes/        # Express routers
 │   ├── middleware/    # Auth, role checks, validation, error handling
 │   ├── utils/         # Helpers (JWT, async wrapper, activity logging)
-│   ├── scripts/       # Database seed script
 │   └── server.js      # App entry point
 ├── client/            # React (Vite) frontend
 │   └── src/
@@ -73,14 +72,7 @@ npm run dev
 ```
 The API starts on `http://localhost:5000`. You should see `MongoDB connected: <host>` and `Server running on http://localhost:5000` in the console.
 
-### 3. (Optional but recommended) Seed demo data
-In a new terminal, still inside `server/`:
-```bash
-npm run seed
-```
-This creates a demo Admin account, a demo Staff account, a couple of categories/suppliers, and a few products (see [Demo Credentials](#demo-credentials)). Safe to run more than once — it won't create duplicates.
-
-### 4. Frontend setup
+### 3. Frontend setup
 Open a **new terminal**:
 ```bash
 cd client
@@ -90,10 +82,10 @@ npm run dev
 ```
 The app opens on `http://localhost:5173`.
 
-### 5. Log in
-Go to `http://localhost:5173`, and either:
-- Log in with the seeded [demo credentials](#demo-credentials), or
-- Click **Register** and create your own account.
+### 4. Log in
+Go to `http://localhost:5173` and click **Register**.
+
+There's no seed script and no demo accounts - the **first account you register becomes the Admin automatically** (see `registerUser` in `server/controllers/authController.js`). Once that first Admin exists, public registration closes itself, and that Admin creates every Manager/Staff account afterwards from the Admin Panel with their real name/email.
 
 ## Environment Variables
 
@@ -128,18 +120,11 @@ Template at `client/.env.example`.
 3. Under **Network Access**, allow your IP (or `0.0.0.0/0` for development only).
 4. Click **Connect → Drivers**, copy the connection string, and paste it into `MONGO_URI` in `server/.env`, replacing `<password>` with your database user's password.
 
-The app creates all 7 collections (Users, Roles, Products, Categories, Suppliers, StockAlerts, ActivityLogs) automatically the first time documents are written to them — no manual schema setup needed.
+The app creates all collections automatically the first time documents are written to them — no manual schema setup needed, and no seed data to clean up afterwards.
 
-## Demo Credentials
+## First Login
 
-After running `npm run seed` in `server/`:
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@example.com` | `Admin@123` |
-| Staff/Manager | `staff@example.com` | `Staff@123` |
-
-**Change or remove these before deploying anywhere public** — they're for local demo/testing only.
+There is no seed script. Register the very first account at `http://localhost:5173/register` — it automatically becomes the **Admin** (see `registerUser` in `server/controllers/authController.js`). Public registration then closes itself; that Admin creates every Manager/Staff account from the Admin Panel afterwards, with their real name and email.
 
 ## API Documentation
 
@@ -178,7 +163,7 @@ A typical free-tier deployment splits the two apps:
 ### After deploying
 - Update `CLIENT_URL` in the backend's environment variables to match your deployed frontend URL (for CORS).
 - Generate a fresh, long, random `JWT_SECRET` for production — don't reuse the local dev one.
-- Run `npm run seed` against your production database only if you actually want demo accounts there (usually you don't — register real accounts instead, or remove the demo accounts afterward via the Admin Panel).
+- Register the first real Admin account through `/register` on your deployed frontend - it becomes Admin automatically, and public registration closes itself right after. Don't run any seed/demo-data script against a production database.
 
 ## Troubleshooting
 

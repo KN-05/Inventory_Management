@@ -18,9 +18,15 @@ const {
 } = require('../controllers/adminController');
 const { getActivityLogs } = require('../controllers/activityLogController');
 const { getSettings, updateSettings } = require('../controllers/settingsController');
+const {
+  getSalesAnalytics,
+  getPurchaseAnalytics,
+  getProfitAnalytics,
+} = require('../controllers/analyticsController');
 
 const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const { authorize, requirePermission } = require('../middleware/roleMiddleware');
+const { PERMISSIONS } = require('../config/permissions');
 const validateRequest = require('../middleware/validateMiddleware');
 
 router.use(protect);
@@ -66,6 +72,16 @@ router.patch(
 // --- Reports: Admin + Manager ---
 router.get('/reports/stock', authorize('admin', 'manager'), getStockReport);
 router.get('/reports/suppliers', authorize('admin', 'manager'), getSupplierReport);
+
+// --- Analytics: Admin + Manager, per ANALYTICS_VIEW (PHASE 10) ---
+// Separate from the Reports above, matching the spec's sidebar having
+// both "Reports" and "Analytics" as distinct items - Reports covers
+// Inventory Analytics (stock value, category/supplier breakdown, already
+// built in earlier phases); these three cover Sales, Purchase, and
+// Profit analytics specifically.
+router.get('/analytics/sales', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getSalesAnalytics);
+router.get('/analytics/purchases', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getPurchaseAnalytics);
+router.get('/analytics/profit', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getProfitAnalytics);
 
 // --- Activity Logs: Admin only (full log access, per the spec) ---
 router.get('/activity-logs', authorize('admin'), getActivityLogs);

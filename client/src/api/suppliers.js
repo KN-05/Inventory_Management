@@ -17,3 +17,7 @@ export const updateSupplier = (id, data) =>
 
 export const deleteSupplier = (id) =>
   axiosInstance.delete(`/suppliers/${id}`).then((res) => res.data);
+
+// PHASE 9: CSV export - see the identical pattern/reasoning in api/products.js.
+export const exportSuppliersCsv = () =>
+  axiosInstance.get('/suppliers/export', { responseType: 'blob' }).then((res) => res.data);

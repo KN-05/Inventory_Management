@@ -18,3 +18,13 @@ export const getStockReport = () =>
 
 export const getSupplierReport = () =>
   axiosInstance.get('/admin/reports/suppliers').then((res) => res.data.report);
+
+// PHASE 10: Sales / Purchase / Profit analytics.
+export const getSalesAnalytics = () =>
+  axiosInstance.get('/admin/analytics/sales').then((res) => res.data.analytics);
+
+export const getPurchaseAnalytics = () =>
+  axiosInstance.get('/admin/analytics/purchases').then((res) => res.data.analytics);
+
+export const getProfitAnalytics = () =>
+  axiosInstance.get('/admin/analytics/profit').then((res) => res.data.analytics);

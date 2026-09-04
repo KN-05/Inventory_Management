@@ -59,6 +59,21 @@ const PERMISSIONS = {
   PURCHASES_UPDATE: 'purchases.update',
   PURCHASES_DELETE: 'purchases.delete',
   PURCHASES_RECEIVE: 'purchases.receive',
+
+  // PHASE 8: Customers. Staff gets create/view only ("Customer
+  // creation/view" per the spec's Staff Allowed list) - not update/delete.
+  CUSTOMERS_VIEW: 'customers.view',
+  CUSTOMERS_CREATE: 'customers.create',
+  CUSTOMERS_UPDATE: 'customers.update',
+  CUSTOMERS_DELETE: 'customers.delete',
+
+  // PHASE 8: Sales. Staff gets view/create ("Sales", "Basic billing" per
+  // the spec's Staff Allowed list). There is deliberately no
+  // SALES_UPDATE - a completed sale isn't edited in place, it's either
+  // left as-is or cancelled (which restores stock) - see saleController.js.
+  SALES_VIEW: 'sales.view',
+  SALES_CREATE: 'sales.create',
+  SALES_CANCEL: 'sales.cancel',
 };
 
 // Admin: everything.
@@ -93,11 +108,21 @@ const MANAGER_PERMISSIONS = [
   PERMISSIONS.PURCHASES_CREATE,
   PERMISSIONS.PURCHASES_UPDATE,
   PERMISSIONS.PURCHASES_RECEIVE,
+  // PHASE 8: full Customer + Sales access for Manager, per the spec
+  // ("Focus heavily on: ... sales, billing ...").
+  PERMISSIONS.CUSTOMERS_VIEW,
+  PERMISSIONS.CUSTOMERS_CREATE,
+  PERMISSIONS.CUSTOMERS_UPDATE,
+  PERMISSIONS.CUSTOMERS_DELETE,
+  PERMISSIONS.SALES_VIEW,
+  PERMISSIONS.SALES_CREATE,
+  PERMISSIONS.SALES_CANCEL,
 ];
 
 // Staff (~50% per spec): simplified, operational-only. Can view and do
-// basic stock work, but not delete records, manage suppliers/categories,
-// or see reports/analytics/imports.
+// basic stock work, plus Customer creation/Sales per the spec's explicit
+// Staff "Allowed" list - but not delete records, manage
+// suppliers/categories, cancel sales, or see reports/analytics/imports.
 const STAFF_PERMISSIONS = [
   PERMISSIONS.PRODUCTS_VIEW,
   PERMISSIONS.PRODUCTS_CREATE,
@@ -105,6 +130,12 @@ const STAFF_PERMISSIONS = [
   PERMISSIONS.CATEGORIES_VIEW,
   PERMISSIONS.SUPPLIERS_VIEW,
   PERMISSIONS.INVENTORY_UPDATE,
+  // PHASE 8: "Customer creation/view", "Sales", "Basic billing" per the
+  // spec's Staff Allowed list.
+  PERMISSIONS.CUSTOMERS_VIEW,
+  PERMISSIONS.CUSTOMERS_CREATE,
+  PERMISSIONS.SALES_VIEW,
+  PERMISSIONS.SALES_CREATE,
 ];
 
 const ROLE_PERMISSIONS = {

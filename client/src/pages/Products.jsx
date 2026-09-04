@@ -12,7 +12,9 @@ import {
   increaseStock,
   decreaseStock,
   uploadProductImage,
+  exportProductsCsv,
 } from '../api/products';
+import { downloadBlob } from '../utils/downloadBlob';
 
 import ProductFilters from '../components/products/ProductFilters';
 import ProductTable from '../components/products/ProductTable';
@@ -156,11 +158,25 @@ function Products() {
     }
   };
 
+  // PHASE 9: everyone who can view products can export them (Staff
+  // included - PRODUCTS_VIEW is what the backend actually checks).
+  const handleExport = async () => {
+    try {
+      const blob = await exportProductsCsv();
+      downloadBlob(blob, 'products-export.csv');
+    } catch (err) {
+      toast.error('Failed to export products: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <h1>Products</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button variant="secondary" onClick={handleExport}>
+            Export CSV
+          </Button>
           {canDelete && (
             <Button variant="secondary" onClick={() => setImportOpen(true)}>
               Import CSV

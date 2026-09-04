@@ -18,7 +18,7 @@ const activityLogSchema = new mongoose.Schema(
     },
     module: {
       type: String,
-      enum: ['product', 'supplier', 'category', 'stock', 'user', 'auth', 'purchase', 'other'],
+      enum: ['product', 'supplier', 'category', 'stock', 'user', 'auth', 'purchase', 'sale', 'customer', 'other'],
       default: 'other',
     },
   },

@@ -13,6 +13,7 @@ const {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  exportSuppliers,
 } = require('../controllers/supplierController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -31,6 +32,9 @@ const supplierValidationRules = [
     .withMessage("Status must be 'active' or 'inactive'"),
 ];
 
+// PHASE 9: '/export' registered before '/:id' - see productRoutes.js's
+// identical comment for why the order matters.
+router.get('/export', requirePermission(PERMISSIONS.SUPPLIERS_VIEW), exportSuppliers);
 router.get('/', getSuppliers);
 router.get('/:id', getSupplierById);
 router.post(

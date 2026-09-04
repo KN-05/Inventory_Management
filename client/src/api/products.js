@@ -52,12 +52,23 @@ export const getProductStockMovements = (id) =>
 // override the Content-Type header for just this one request - axios
 // detects the FormData and lets the browser fill in the correct
 // multipart boundary automatically once we stop forcing 'application/json'.
-export const importProductsCsv = (file) => {
+// PHASE 9: `preview` controls whether the backend actually inserts rows
+// (false/omitted) or just validates and reports what WOULD happen
+// (true) - see productController.js's importProducts for the full
+// upload -> validate -> preview -> confirm -> insert flow.
+export const importProductsCsv = (file, { preview = false } = {}) => {
   const formData = new FormData();
   formData.append('file', file);
   return axiosInstance
-    .post('/products/import', formData, {
+    .post(`/products/import?preview=${preview}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     .then((res) => res.data);
 };
+
+// PHASE 9: triggers a CSV download of the full product/inventory list.
+// Uses axios with responseType 'blob' (rather than a plain <a href>)
+// because the endpoint requires an Authorization header, which a plain
+// link click can't send.
+export const exportProductsCsv = () =>
+  axiosInstance.get('/products/export', { responseType: 'blob' }).then((res) => res.data);

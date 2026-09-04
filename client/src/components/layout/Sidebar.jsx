@@ -64,6 +64,17 @@ function Sidebar({ activeAlertsCount = 0, open, onClose }) {
             {activeAlertsCount > 0 && <span className="nav-badge">{activeAlertsCount}</span>}
           </SidebarLink>
 
+          {/* PHASE 8: Sales, Billing, Customers - ALL three roles get
+              these per the spec's sidebar layout (Staff's sidebar
+              explicitly includes "Sales", "Billing", "Customers" too). */}
+          <p className="sidebar-section-label">Sales</p>
+          <SidebarLink to="/sales" onClick={onClose}>
+            Sales / Billing
+          </SidebarLink>
+          <SidebarLink to="/customers" onClick={onClose}>
+            Customers
+          </SidebarLink>
+
           {(isAdmin || isManager) && (
             <>
               <p className="sidebar-section-label">{isAdmin ? 'Admin' : 'Management'}</p>
@@ -74,6 +85,11 @@ function Sidebar({ activeAlertsCount = 0, open, onClose }) {
               )}
               <SidebarLink to="/admin/reports" onClick={onClose}>
                 Reports
+              </SidebarLink>
+              {/* PHASE 10: Analytics - Admin + Manager, matching the spec's
+                  sidebar having both "Reports" and "Analytics" separately. */}
+              <SidebarLink to="/admin/analytics" onClick={onClose}>
+                Analytics
               </SidebarLink>
               {isAdmin && (
                 <>

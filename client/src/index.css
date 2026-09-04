@@ -268,46 +268,36 @@ a:focus-visible {
 
 .password-field {
   position: relative;
-  display: flex;
 }
 
 .password-field input {
   flex: 1;
-  padding-right: 5rem;
+  padding-right: 3.2rem;
 }
 
 .password-toggle {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
+  position: absolute !important;
+  right: 10px !important;
+  top: 50% !important;
   transform: translateY(-50%) !important;
 
   margin: 0 !important;
-  padding: 0.35rem 0.7rem !important;
+  padding: 8px 12px !important;
 
-  background: var(--color-primary-gradient) !important;
-  color: white !important;
+  width: auto !important;
+  height: auto !important;
 
   border: none !important;
   border-radius: 8px !important;
 
-  font-size: 0.78rem !important;
+  background: var(--color-primary-gradient) !important;
+  color: white !important;
+
+  font-size: 14px !important;
   font-weight: 600 !important;
 
   box-shadow: none !important;
-  cursor: pointer;
-
-  transition: none !important;
-}
-
-.password-toggle:hover,
-.password-toggle:active {
-  transform: translateY(-50%) !important;
-  box-shadow: none !important;
-}
-
-.password-toggle:hover {
-  opacity: 0.9;
+  z-index: 10;
 }
 
 .auth-row {
@@ -316,6 +306,10 @@ a:focus-visible {
   justify-content: space-between;
   margin-top: 0.75rem;
   font-size: 0.82rem;
+}
+
+.password-toggle:hover {
+  opacity: 0.9;
 }
 
 .checkbox-label {
@@ -362,7 +356,7 @@ a:focus-visible {
   transition: box-shadow var(--dur-fast) ease;
 }
 
-.auth-form button {
+.auth-form > button {
   margin-top: 1.25rem;
   padding: 0.65rem;
   border: none;
@@ -531,6 +525,7 @@ a:focus-visible {
   box-shadow: 0 2px 8px rgba(30, 36, 51, 0.06);
   display: flex;
   align-items: center;
+  gap: 1.25rem;
   padding: 0 1.5rem;
   position: sticky;
   top: 0;
@@ -839,6 +834,36 @@ a:focus-visible {
   margin-bottom: 0.5rem;
 }
 
+/* PHASE 8: invoice print support. When printing (Ctrl+P / the invoice's
+   "Print / Download" button, which just calls window.print()), hide
+   everything on the page except the invoice content itself, so the
+   printout is a clean invoice - not the whole app chrome. */
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .invoice-print-area,
+  .invoice-print-area * {
+    visibility: visible;
+  }
+  .invoice-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
 /* ==========================================================================
    General page layout
    ========================================================================== */
@@ -944,6 +969,13 @@ button:disabled {
 .banner-error {
   color: var(--color-danger);
   border-left-color: var(--color-danger);
+}
+
+/* PHASE 10: used for non-blocking caveats, e.g. the profit-analytics
+   cost-data-limitation note - not an error, just something worth flagging. */
+.banner-warning {
+  color: var(--color-warning);
+  border-left-color: var(--color-warning);
 }
 
 /* ==========================================================================
@@ -1314,7 +1346,7 @@ button:disabled {
    ========================================================================== */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -1324,6 +1356,13 @@ button:disabled {
   border-radius: var(--radius);
   padding: 1rem;
   box-shadow: var(--neu-shadow);
+  /* BUGFIX: a large formatted value (e.g. "₹1,43,15,000.00") was
+     overflowing past the card's edge instead of staying inside it -
+     `overflow: hidden` is a safety net, and the value itself now
+     shrinks/wraps gracefully (see .stat-card-value below) so numbers
+     stay readable instead of being clipped. */
+  overflow: hidden;
+  min-width: 0;
 }
 
 .stat-card:hover {
@@ -1334,14 +1373,22 @@ button:disabled {
   margin: 0 0 0.35rem;
   font-size: 0.78rem;
   color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-card-value {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 1.5rem;
+  /* BUGFIX: fixed 1.5rem was too big for long currency values in a
+     narrow card - clamp() scales it down on smaller cards/screens
+     instead of letting the text run past the card's edge. */
+  font-size: clamp(1.05rem, 1.1vw + 0.75rem, 1.5rem);
   font-weight: 700;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
 }
 
 .stat-card-warning .stat-card-value {
@@ -1360,6 +1407,38 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
+}
+
+/* PHASE: dashboard polish - centers a "42 Products" total inside the
+   donut chart's hole, positioned over the ResponsiveContainer below it. */
+.donut-chart-wrap {
+  position: relative;
+}
+
+.donut-chart-center {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.donut-chart-center-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.donut-chart-center-label {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
 }
 
 .chart-card {

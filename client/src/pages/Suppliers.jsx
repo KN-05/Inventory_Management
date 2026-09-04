@@ -8,7 +8,9 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  exportSuppliersCsv,
 } from '../api/suppliers';
+import { downloadBlob } from '../utils/downloadBlob';
 
 import SupplierTable from '../components/suppliers/SupplierTable';
 import SupplierForm from '../components/suppliers/SupplierForm';
@@ -92,15 +94,30 @@ function Suppliers() {
     }
   };
 
+  // PHASE 9: everyone who can view suppliers can export them.
+  const handleExport = async () => {
+    try {
+      const blob = await exportSuppliersCsv();
+      downloadBlob(blob, 'suppliers-export.csv');
+    } catch (err) {
+      toast.error('Failed to export suppliers: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <h1>Suppliers</h1>
-        {canManage && (
-          <Button variant="primary" onClick={openAddForm}>
-            + Add Supplier
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button variant="secondary" onClick={handleExport}>
+            Export CSV
           </Button>
-        )}
+          {canManage && (
+            <Button variant="primary" onClick={openAddForm}>
+              + Add Supplier
+            </Button>
+          )}
+        </div>
       </div>
 
       {loadError && <p className="banner banner-error">{loadError}</p>}

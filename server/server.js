@@ -58,6 +58,9 @@ app.use('/api/profile', require('./routes/profileRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 // PHASE 7: Purchase Orders (create -> receive -> stock auto-increases)
 app.use('/api/purchases', require('./routes/purchaseRoutes'));
+// PHASE 8: Customers + Sales (checkout -> stock auto-decreases, invoice generated)
+app.use('/api/customers', require('./routes/customerRoutes'));
+app.use('/api/sales', require('./routes/saleRoutes'));
 
 // All planned feature routes are now mounted (Phases 3-9 complete).
 //

@@ -7,6 +7,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const logActivity = require('../utils/logActivity');
 const createNotification = require('../utils/createNotification');
 const { generateUniquePurchaseNumber } = require('../utils/generatePurchaseNumber');
+const toCsv = require('../utils/toCsv');
 const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
@@ -297,6 +298,58 @@ const deletePurchase = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Purchase order deleted' });
 });
 
+// @desc   Export all purchases as a CSV file - one row per line item
+// @route  GET /api/purchases/export
+// @access Private (Admin + Manager, per PURCHASES_VIEW)
+const exportPurchases = asyncHandler(async (req, res) => {
+  const purchases = await Purchase.find()
+    .populate('supplier', 'name')
+    .populate('items.product', 'name sku')
+    .populate('createdBy', 'name')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const rows = purchases.flatMap((purchase) =>
+    purchase.items.map((item) => ({
+      purchaseNumber: purchase.purchaseNumber,
+      date: new Date(purchase.createdAt).toISOString(),
+      supplier: purchase.supplier?.name || '',
+      product: item.product?.name || 'Unknown product',
+      sku: item.product?.sku || '',
+      quantity: item.quantity,
+      purchasePrice: item.purchasePrice,
+      subtotal: item.subtotal,
+      purchaseTotal: purchase.totalAmount,
+      paymentStatus: purchase.paymentStatus,
+      status: purchase.status,
+      receivedDate: purchase.receivedDate ? new Date(purchase.receivedDate).toISOString() : '',
+      createdBy: purchase.createdBy?.name || '',
+    }))
+  );
+
+  const csv = toCsv(rows, [
+    { key: 'purchaseNumber', label: 'Purchase Number' },
+    { key: 'date', label: 'Date' },
+    { key: 'supplier', label: 'Supplier' },
+    { key: 'product', label: 'Product' },
+    { key: 'sku', label: 'SKU' },
+    { key: 'quantity', label: 'Quantity' },
+    { key: 'purchasePrice', label: 'Purchase Price' },
+    { key: 'subtotal', label: 'Line Subtotal' },
+    { key: 'purchaseTotal', label: 'Purchase Total' },
+    { key: 'paymentStatus', label: 'Payment Status' },
+    { key: 'status', label: 'Status' },
+    { key: 'receivedDate', label: 'Received Date' },
+    { key: 'createdBy', label: 'Created By' },
+  ]);
+
+  await logActivity(req.user._id, `Exported ${purchases.length} purchase(s) to CSV`, 'purchase');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="purchases-export.csv"');
+  res.status(200).send(csv);
+});
+
 module.exports = {
   getPurchases,
   getPurchaseById,
@@ -305,4 +358,5 @@ module.exports = {
   updatePaymentStatus,
   receivePurchase,
   deletePurchase,
+  exportPurchases,
 };

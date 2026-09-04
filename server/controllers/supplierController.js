@@ -7,6 +7,7 @@
 
 const asyncHandler = require('../utils/asyncHandler');
 const logActivity = require('../utils/logActivity');
+const toCsv = require('../utils/toCsv');
 const Supplier = require('../models/Supplier');
 const Product = require('../models/Product');
 
@@ -124,10 +125,37 @@ const deleteSupplier = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Supplier deleted' });
 });
 
+// @desc   Export all suppliers as a CSV file
+// @route  GET /api/suppliers/export
+// @access Private (Admin + Manager + Staff, per SUPPLIERS_VIEW)
+const exportSuppliers = asyncHandler(async (req, res) => {
+  const suppliers = await Supplier.find().sort({ name: 1 }).lean();
+
+  const csv = toCsv(suppliers, [
+    { key: 'name', label: 'Name' },
+    { key: 'companyName', label: 'Company Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'address', label: 'Address' },
+    { key: 'city', label: 'City' },
+    { key: 'state', label: 'State' },
+    { key: 'country', label: 'Country' },
+    { key: 'taxNumber', label: 'Tax Number' },
+    { key: 'status', label: 'Status' },
+  ]);
+
+  await logActivity(req.user._id, `Exported ${suppliers.length} supplier(s) to CSV`, 'supplier');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="suppliers-export.csv"');
+  res.status(200).send(csv);
+});
+
 module.exports = {
   getSuppliers,
   getSupplierById,
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  exportSuppliers,
 };

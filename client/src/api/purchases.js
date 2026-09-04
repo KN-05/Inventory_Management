@@ -23,3 +23,7 @@ export const receivePurchase = (id) =>
 
 export const deletePurchase = (id) =>
   axiosInstance.delete(`/purchases/${id}`).then((res) => res.data);
+
+// PHASE 9: CSV export - see the identical pattern/reasoning in api/products.js.
+export const exportPurchasesCsv = () =>
+  axiosInstance.get('/purchases/export', { responseType: 'blob' }).then((res) => res.data);

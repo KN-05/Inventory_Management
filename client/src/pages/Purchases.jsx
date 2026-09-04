@@ -14,7 +14,9 @@ import {
   updatePurchasePaymentStatus,
   receivePurchase,
   deletePurchase,
+  exportPurchasesCsv,
 } from '../api/purchases';
+import { downloadBlob } from '../utils/downloadBlob';
 
 import PurchaseTable from '../components/purchases/PurchaseTable';
 import PurchaseForm from '../components/purchases/PurchaseForm';
@@ -141,15 +143,32 @@ function Purchases() {
     }
   };
 
+  // PHASE 9: gated to Admin/Manager here in the UI, though the backend's
+  // own PURCHASES_VIEW check is the real enforcement (Staff has no
+  // PURCHASES_VIEW at all, so they can't reach this page in the first place).
+  const handleExport = async () => {
+    try {
+      const blob = await exportPurchasesCsv();
+      downloadBlob(blob, 'purchases-export.csv');
+    } catch (err) {
+      toast.error('Failed to export purchases: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <h1>Purchases</h1>
-        {canManage && (
-          <Button variant="primary" onClick={openAddForm}>
-            + New Purchase Order
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button variant="secondary" onClick={handleExport}>
+            Export CSV
           </Button>
-        )}
+          {canManage && (
+            <Button variant="primary" onClick={openAddForm}>
+              + New Purchase Order
+            </Button>
+          )}
+        </div>
       </div>
 
       {loadError && <p className="banner banner-error">{loadError}</p>}

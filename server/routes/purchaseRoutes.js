@@ -12,6 +12,7 @@ const {
   updatePaymentStatus,
   receivePurchase,
   deletePurchase,
+  exportPurchases,
 } = require('../controllers/purchaseController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -36,6 +37,9 @@ const purchaseValidationRules = [
   body('tax').optional().isFloat({ min: 0 }).withMessage('Tax must be 0 or greater'),
 ];
 
+// PHASE 9: '/export' registered before '/:id' - order matters (see
+// productRoutes.js's identical comment).
+router.get('/export', requirePermission(PERMISSIONS.PURCHASES_VIEW), exportPurchases);
 router.get('/', requirePermission(PERMISSIONS.PURCHASES_VIEW), getPurchases);
 router.get('/:id', requirePermission(PERMISSIONS.PURCHASES_VIEW), getPurchaseById);
 router.post(

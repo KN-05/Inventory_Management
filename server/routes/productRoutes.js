@@ -19,6 +19,7 @@ const {
   decreaseStock,
   getProductStockMovements,
   importProducts,
+  exportProducts,
 } = require('../controllers/productController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -89,6 +90,10 @@ const productValidationRules = [
 ];
 
 // Admin + Manager + Staff can view, create, edit, and adjust stock
+// PHASE 9: '/export' MUST be registered before the '/:id' GET route
+// below - otherwise Express would treat "export" as an :id value and
+// try (and fail) to look up a product with that id.
+router.get('/export', requirePermission(PERMISSIONS.PRODUCTS_VIEW), exportProducts);
 router.get('/', getProducts);
 router.get('/:id', getProductById);
 router.post('/', productValidationRules, validateRequest, createProduct);

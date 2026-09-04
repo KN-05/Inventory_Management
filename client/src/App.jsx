@@ -16,9 +16,12 @@ import Products from './pages/Products';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import Purchases from './pages/Purchases';
+import Customers from './pages/Customers';
+import Sales from './pages/Sales';
 import StockAlerts from './pages/StockAlerts';
 import UserManagement from './pages/admin/UserManagement';
 import Reports from './pages/admin/Reports';
+import Analytics from './pages/admin/Analytics';
 import ActivityLogs from './pages/admin/ActivityLogs';
 import Settings from './pages/admin/Settings';
 import Profile from './pages/Profile';
@@ -58,6 +61,13 @@ function App() {
                 }
               />
               <Route path="/alerts" element={<StockAlerts />} />
+              {/* PHASE 8: Customers + Sales - Admin, Manager, AND Staff all
+                  get these per the spec's Staff Allowed list ("Customer
+                  creation/view", "Sales", "Basic billing"); no RoleRoute
+                  wrapper needed, permission-gating happens inside the
+                  pages/API for the specific actions (edit/delete/cancel). */}
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/sales" element={<Sales />} />
               <Route path="/profile" element={<Profile />} />
 
               {/* Admin-only route */}
@@ -77,6 +87,17 @@ function App() {
                 element={
                   <RoleRoute allowedRoles={['admin', 'manager']}>
                     <Reports />
+                  </RoleRoute>
+                }
+              />
+
+              {/* PHASE 10: Analytics - separate page from Reports, same
+                  Admin + Manager access (per ANALYTICS_VIEW). */}
+              <Route
+                path="/admin/analytics"
+                element={
+                  <RoleRoute allowedRoles={['admin', 'manager']}>
+                    <Analytics />
                   </RoleRoute>
                 }
               />
