@@ -4,9 +4,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import PublicRoute from './components/common/PublicRoute';
 import RoleRoute from './components/common/RoleRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
 
+import LandingPage from './pages/LandingPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -32,8 +34,24 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <Routes>
+            {/* PHASE 16: new landing/starting page - the first thing users
+                see at "/". Purely informational; the existing "Login"
+                route/component/logic below is completely unchanged. */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Public routes */}
-            <Route path="/login" element={<Login />} />
+            {/* PHASE 16: /login is now wrapped in PublicRoute so an
+                already-authenticated user who opens /login is redirected
+                straight to /dashboard instead of seeing the form again.
+                Register/ForgotPassword/ResetPassword are untouched. */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -121,10 +139,9 @@ function App() {
               />
             </Route>
 
-            {/* Default route: send to dashboard (which redirects to login if not authenticated) */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-            {/* Catch-all: unknown paths go to dashboard too */}
+            {/* Catch-all: unknown paths go to dashboard - ProtectedRoute
+                bounces unauthenticated users on to /login from there,
+                exactly as it did before this change. */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </ToastProvider>

@@ -4,15 +4,30 @@
 // every modal in the app animates identically without repeating the
 // AnimatePresence/motion.div boilerplate in each one.
 //
+// PHASE 14 (accessibility pass): added `role="dialog"`/`aria-modal` so
+// screen readers announce this as a dialog, and an Escape-key listener -
+// previously the only way to close a modal was clicking the overlay or a
+// Cancel/Close button, which isn't reachable by keyboard-only navigation.
+//
 // Usage:
 //   <AnimatedModal open={open} onClose={onCancel} maxWidth={480}>
 //     <h2>Title</h2>
 //     ...
 //   </AnimatedModal>
 
+import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 function AnimatedModal({ open, onClose, maxWidth = 420, children }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -26,6 +41,8 @@ function AnimatedModal({ open, onClose, maxWidth = 420, children }) {
         >
           <motion.div
             className="modal-box"
+            role="dialog"
+            aria-modal="true"
             style={{ maxWidth }}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, y: 12, scale: 0.98 }}

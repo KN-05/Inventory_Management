@@ -6,7 +6,7 @@
 // instead of showing a blank/broken page.
 
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 function RoleRoute({ allowedRoles, children }) {
   const { user } = useAuth();

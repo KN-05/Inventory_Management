@@ -19,7 +19,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { roleLabel } from '../utils/roleLabel';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getDashboardSummary } from '../api/dashboard';

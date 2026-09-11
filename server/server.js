@@ -23,10 +23,7 @@ const app = express();
 
 // --- Core middleware ---
 // Allow the frontend (running on a different port) to call this API
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 
 // Parse incoming JSON request bodies into req.body
 app.use(express.json());
@@ -78,6 +75,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://192.168.1.3:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

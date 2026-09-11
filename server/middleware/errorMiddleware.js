@@ -47,10 +47,21 @@ const errorHandler = (err, req, res, next) => {
     message = `Duplicate value for ${field} - it must be unique`;
   }
 
-  // 4. Multer errors (PHASE 13, CSV import) - bad file type from our
-  //    fileFilter, or the file exceeding the 2MB limit. Without this,
-  //    these also fell through to a raw 500.
-  if (err.name === 'MulterError' || err.message === 'Only .csv files are allowed') {
+  // 4. File upload validation errors (CSV import + product/category/
+  //    profile image uploads) - either a native Multer error (wrong
+  //    field name, file too large) or our own fileFilter rejecting an
+  //    unsupported file type. Without this, these fell through to a raw
+  //    500 instead of a clean 400 explaining what was wrong with the file.
+  //
+  // PHASE 13 FIX: this previously only recognized the CSV import's
+  // rejection message, so uploading a bad image type (product/category/
+  // profile photo) still slipped through as an unhandled 500 - now every
+  // known fileFilter message is covered in one list.
+  const fileValidationMessages = [
+    'Only .csv files are allowed',
+    'Only JPG, PNG, or WEBP images are allowed',
+  ];
+  if (err.name === 'MulterError' || fileValidationMessages.includes(err.message)) {
     statusCode = 400;
     message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large (max 2MB)' : err.message;
   }

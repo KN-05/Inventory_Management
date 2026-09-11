@@ -3,7 +3,7 @@
 // and exposes login/register/logout functions. Any component can access
 // this with the `useAuth()` hook instead of passing props everywhere.
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import {
   setSession,
@@ -13,7 +13,11 @@ import {
   clearSession,
 } from '../utils/tokenStorage';
 
-const AuthContext = createContext(null);
+// PHASE 14 CONSISTENCY FIX: the context object itself now lives in
+// useAuth.js (not exported from here) - oxlint's react/only-export-components
+// rule wants a component file to export ONLY components, and that applies
+// to the raw context object just as much as it did to the useAuth() hook.
+import { AuthContext } from './useAuth';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -89,14 +93,4 @@ export function AuthProvider({ children }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-// Custom hook for consuming the context - throws a clear error if used
-// outside of <AuthProvider>, which is much easier to debug than "undefined".
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used inside an <AuthProvider>');
-  }
-  return context;
 }

@@ -21,7 +21,17 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['low_stock', 'out_of_stock', 'user_created', 'new_purchase', 'new_sale', 'system'],
+      enum: [
+        'low_stock',
+        'out_of_stock',
+        'user_created',
+        'new_purchase',
+        'new_sale',
+        'purchase_received',
+        'sale_cancelled',
+        'payment_status',
+        'system',
+      ],
       default: 'system',
     },
     message: {

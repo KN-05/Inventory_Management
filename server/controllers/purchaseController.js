@@ -122,8 +122,19 @@ const createPurchase = asyncHandler(async (req, res) => {
     `Created purchase order "${purchase.purchaseNumber}" for supplier "${supplierDoc.name}"`,
     'purchase'
   );
+  // PHASE 11 FIX: previously only notified 'admin' - Manager runs
+  // Purchases just as much (PURCHASES_CREATE/RECEIVE are both granted to
+  // Manager), so they were missing notifications about their own module.
+  // Mirrors the pattern already used for low-stock alerts in
+  // models/Product.js, which correctly notifies both roles.
   await createNotification(
     'admin',
+    'new_purchase',
+    `New purchase order ${purchase.purchaseNumber} created (${supplierDoc.name})`,
+    '/purchases'
+  );
+  await createNotification(
+    'manager',
     'new_purchase',
     `New purchase order ${purchase.purchaseNumber} created (${supplierDoc.name})`,
     '/purchases'
@@ -211,6 +222,24 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
     `Marked purchase "${purchase.purchaseNumber}" payment status as "${paymentStatus}"`,
     'purchase'
   );
+  // PHASE 11: "Payment status" is explicitly one of the spec's example
+  // notification triggers. Only notify on 'paid' - flagging every minor
+  // status tweak (e.g. unpaid -> partial) would get noisy fast, but
+  // "this is now fully paid" is genuinely worth surfacing to both roles.
+  if (paymentStatus === 'paid') {
+    await createNotification(
+      'admin',
+      'payment_status',
+      `Purchase "${purchase.purchaseNumber}" marked as paid`,
+      '/purchases'
+    );
+    await createNotification(
+      'manager',
+      'payment_status',
+      `Purchase "${purchase.purchaseNumber}" marked as paid`,
+      '/purchases'
+    );
+  }
 
   res.status(200).json({ success: true, message: 'Payment status updated', purchase });
 });
@@ -269,6 +298,21 @@ const receivePurchase = asyncHandler(async (req, res) => {
     req.user._id,
     `Received purchase order "${purchase.purchaseNumber}" - stock updated for ${purchase.items.length} product(s)`,
     'purchase'
+  );
+  // PHASE 11: receiving is the moment stock actually changes - more
+  // notification-worthy than the initial order creation, so both roles
+  // get told stock has genuinely moved.
+  await createNotification(
+    'admin',
+    'purchase_received',
+    `Purchase "${purchase.purchaseNumber}" received - stock updated`,
+    '/purchases'
+  );
+  await createNotification(
+    'manager',
+    'purchase_received',
+    `Purchase "${purchase.purchaseNumber}" received - stock updated`,
+    '/purchases'
   );
 
   res.status(200).json({ success: true, message: 'Purchase received and stock updated', purchase });

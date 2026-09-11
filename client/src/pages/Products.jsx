@@ -1,8 +1,8 @@
 // src/pages/Products.jsx
 
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/useAuth';
+import { useToast } from '../context/useToast';
 import { getCategoryOptions, getSupplierOptions } from '../api/lookups';
 import {
   getProducts,

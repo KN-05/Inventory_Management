@@ -3,7 +3,7 @@
 // profile photo, if set) and a hamburger button to open the Sidebar on
 // mobile (see index.css for the responsive breakpoint).
 
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { roleLabel } from '../../utils/roleLabel';
 import Button from '../common/Button';
 import NotificationBell from './NotificationBell';

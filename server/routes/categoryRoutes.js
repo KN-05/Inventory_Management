@@ -27,7 +27,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 // PHASE 6: category photo upload - same diskStorage pattern used for
 // profile photos and product photos.
@@ -61,20 +61,20 @@ const categoryValidationRules = [
   body('status').optional().isIn(['active', 'inactive']).withMessage("Status must be 'active' or 'inactive'"),
 ];
 
-router.get('/', getCategories);
-router.get('/:id', getCategoryById);
+// PHASE 13 HARDENING: explicit CATEGORIES_VIEW check, same reasoning as
+// the identical change in productRoutes.js.
+router.get('/', requirePermission(PERMISSIONS.CATEGORIES_VIEW), getCategories);
+router.get('/:id', requirePermission(PERMISSIONS.CATEGORIES_VIEW), getCategoryById);
 router.post(
   '/',
   requirePermission(PERMISSIONS.CATEGORIES_CREATE),
-  categoryValidationRules,
-  validateRequest,
+  runValidation(categoryValidationRules),
   createCategory
 );
 router.put(
   '/:id',
   requirePermission(PERMISSIONS.CATEGORIES_UPDATE),
-  categoryValidationRules,
-  validateRequest,
+  runValidation(categoryValidationRules),
   updateCategory
 );
 router.post(

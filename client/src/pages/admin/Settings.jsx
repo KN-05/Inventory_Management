@@ -2,7 +2,7 @@
 // PHASE 3: system-wide settings, Admin only per the spec's nav list.
 
 import { useEffect, useState } from 'react';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../context/useToast';
 import { getSettings, updateSettings } from '../../api/settings';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';

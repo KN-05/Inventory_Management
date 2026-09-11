@@ -4,11 +4,30 @@
 // attempt after that with a 403, and this page shows that message
 // clearly. Every account after the bootstrap Admin must be created by an
 // Admin from the Admin Panel (Manager or Staff role).
+//
+// PHASE 14 (redesign): same split-screen layout + staggered field
+// animation as Login.jsx, reusing the same LoginIllustration component
+// (with a caption suited to registration instead of login) so the two
+// auth pages feel like one consistent flow rather than two different
+// designs.
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
+import LoginIllustration from '../../components/auth/LoginIllustration';
+
+const container = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } },
+};
 
 function Register() {
   const [name, setName] = useState('');
@@ -43,53 +62,94 @@ function Register() {
 
   return (
     <div className="auth-page">
-      <motion.form
-        className="auth-form"
-        onSubmit={handleSubmit}
-        initial={{ opacity: 0, y: 10 }}
+      <motion.div
+        className="auth-split-card"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       >
-        <h1>Register</h1>
+        <div className="auth-split-form-side">
+          <motion.form
+            className="auth-form"
+            onSubmit={handleSubmit}
+            variants={container}
+            initial="hidden"
+            animate="show"
+          >
+            <motion.div className="auth-brand" variants={item}>
+              <span className="auth-brand-mark">IM</span>
+              <span className="auth-brand-name">Inventory Manager</span>
+            </motion.div>
 
-        <p className="auth-hint">
-          This page only works to create the very first account in the system, which
-          automatically becomes <strong>Admin</strong>. If an Admin already exists, ask them
-          to create your account from the Admin Panel.
-        </p>
+            <motion.h1 variants={item}>Create your account</motion.h1>
+            <motion.p className="auth-hint" variants={item}>
+              This page only works to create the very first account in the system, which
+              automatically becomes <strong>Admin</strong>. If an Admin already exists, ask
+              them to create your account from the Admin Panel.
+            </motion.p>
 
-        {error && <p className="form-error">{error}</p>}
+            {error && (
+              <motion.p
+                className="form-error"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {error}
+              </motion.p>
+            )}
 
-        <label htmlFor="name">Name</label>
-        <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <motion.div variants={item}>
+              <label htmlFor="name">Name</label>
+              <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            </motion.div>
 
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+            <motion.div variants={item}>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </motion.div>
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
-          required
-        />
+            <motion.div variants={item}>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                required
+              />
+            </motion.div>
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Creating account...' : 'Register'}
-        </button>
+            <motion.button
+              type="submit"
+              className="auth-submit-btn"
+              disabled={submitting}
+              variants={item}
+              whileTap={{ scale: 0.98 }}
+            >
+              {submitting ? 'Creating account...' : 'Register'}
+            </motion.button>
 
-        <p>
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </motion.form>
+            <motion.p variants={item}>
+              Already have an account? <Link to="/login">Login</Link>
+            </motion.p>
+          </motion.form>
+        </div>
+
+        <div className="auth-split-illustration-side">
+          <LoginIllustration />
+          <div className="auth-illustration-caption">
+            <h2>Set up your workspace</h2>
+            <p>Create the first Admin account to get started.</p>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

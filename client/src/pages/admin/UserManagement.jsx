@@ -5,8 +5,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/useAuth';
+import { useToast } from '../../context/useToast';
 import { getUsers, createUser, updateUserStatus, updateUserRole } from '../../api/admin';
 import { roleLabel } from '../../utils/roleLabel';
 import Loader from '../../components/common/Loader';

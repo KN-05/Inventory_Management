@@ -16,7 +16,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { getAlerts } from '../../api/alerts';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 function DashboardLayout() {
   const { user } = useAuth();

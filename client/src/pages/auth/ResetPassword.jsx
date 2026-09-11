@@ -41,7 +41,7 @@ function ResetPassword() {
   return (
     <div className="auth-page">
       <motion.form
-        className="auth-form"
+        className="auth-form auth-standalone-card"
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -77,7 +77,7 @@ function ResetPassword() {
               required
             />
 
-            <button type="submit" disabled={submitting}>
+            <button type="submit" className="auth-submit-btn" disabled={submitting}>
               {submitting ? 'Resetting...' : 'Reset Password'}
             </button>
           </>

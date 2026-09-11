@@ -19,7 +19,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 router.use(protect);
 
@@ -35,20 +35,20 @@ const supplierValidationRules = [
 // PHASE 9: '/export' registered before '/:id' - see productRoutes.js's
 // identical comment for why the order matters.
 router.get('/export', requirePermission(PERMISSIONS.SUPPLIERS_VIEW), exportSuppliers);
-router.get('/', getSuppliers);
-router.get('/:id', getSupplierById);
+// PHASE 13 HARDENING: explicit SUPPLIERS_VIEW check, same reasoning as
+// the identical change in productRoutes.js.
+router.get('/', requirePermission(PERMISSIONS.SUPPLIERS_VIEW), getSuppliers);
+router.get('/:id', requirePermission(PERMISSIONS.SUPPLIERS_VIEW), getSupplierById);
 router.post(
   '/',
   requirePermission(PERMISSIONS.SUPPLIERS_CREATE),
-  supplierValidationRules,
-  validateRequest,
+  runValidation(supplierValidationRules),
   createSupplier
 );
 router.put(
   '/:id',
   requirePermission(PERMISSIONS.SUPPLIERS_UPDATE),
-  supplierValidationRules,
-  validateRequest,
+  runValidation(supplierValidationRules),
   updateSupplier
 );
 router.delete('/:id', authorize('admin', 'manager'), deleteSupplier);

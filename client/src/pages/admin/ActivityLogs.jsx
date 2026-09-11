@@ -10,7 +10,26 @@ import { roleLabel } from '../../utils/roleLabel';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 
-const MODULES = ['product', 'supplier', 'category', 'stock', 'user', 'auth', 'other'];
+// PHASE 11 FIX: this list was missing 'purchase', 'sale', and 'customer' -
+// those log entries have existed in the database since Phases 7/8 (the
+// backend's ActivityLog module enum already includes them), but Admin
+// had no way to filter down to just them here. Kept in sync with
+// server/models/ActivityLog.js's enum.
+const MODULES = ['product', 'supplier', 'category', 'stock', 'purchase', 'sale', 'customer', 'user', 'auth', 'other'];
+
+// Small color mapping so the module column is scannable at a glance
+// across a long mixed-activity list - purely visual, doesn't affect filtering.
+const MODULE_BADGE_CLASS = {
+  product: 'badge badge-blue',
+  category: 'badge badge-blue',
+  supplier: 'badge badge-blue',
+  stock: 'badge badge-yellow',
+  purchase: 'badge badge-green',
+  sale: 'badge badge-green',
+  customer: 'badge badge-green',
+  user: 'badge badge-red',
+  auth: 'badge badge-red',
+};
 
 function ActivityLogs() {
   const [logs, setLogs] = useState([]);
@@ -99,7 +118,7 @@ function ActivityLogs() {
                   <td>{log.user ? roleLabel(log.user.role) : '-'}</td>
                   <td>{log.action}</td>
                   <td>
-                    <span className="badge">{log.module}</span>
+                    <span className={MODULE_BADGE_CLASS[log.module] || 'badge'}>{log.module}</span>
                   </td>
                   <td className="cell-mono">{new Date(log.createdAt).toLocaleString()}</td>
                 </motion.tr>

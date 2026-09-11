@@ -15,7 +15,7 @@ const {
   changePassword,
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/authMiddleware');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 // PHASE 2: profile photos use diskStorage (not memoryStorage like the CSV
 // import) since they need to persist and be served back later via a URL,
@@ -53,12 +53,11 @@ router.get('/', getProfile);
 
 router.put(
   '/',
-  [
+  runValidation([
     body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
     body('email').optional().isEmail().withMessage('Must be a valid email'),
     body('phone').optional().trim(),
-  ],
-  validateRequest,
+  ]),
   updateProfile
 );
 
@@ -66,13 +65,12 @@ router.post('/photo', upload.single('photo'), uploadPhoto);
 
 router.put(
   '/change-password',
-  [
+  runValidation([
     body('currentPassword').notEmpty().withMessage('Current password is required'),
     body('newPassword')
       .isLength({ min: 6 })
       .withMessage('New password must be at least 6 characters'),
-  ],
-  validateRequest,
+  ]),
   changePassword
 );
 

@@ -3,8 +3,8 @@
 // name, email, phone, and photo, and change their password.
 
 import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/useAuth';
+import { useToast } from '../context/useToast';
 import { roleLabel } from '../utils/roleLabel';
 import { getProfile, updateProfile, changePassword, uploadPhoto } from '../api/profile';
 import { API_ORIGIN } from '../api/axiosInstance';

@@ -4,10 +4,9 @@
 // duplicated (Products, Categories, Suppliers, etc.) with one shared
 // implementation: call `toast.success('Product added')` from anywhere.
 
-import { createContext, useCallback, useContext, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const ToastContext = createContext(null);
+import { ToastContext } from './useToast';
 
 let idCounter = 0;
 
@@ -62,12 +61,4 @@ export function ToastProvider({ children }) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used inside a <ToastProvider>');
-  }
-  return context;
 }

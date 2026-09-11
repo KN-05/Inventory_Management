@@ -1,8 +1,8 @@
 // src/pages/Categories.jsx
 
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/useAuth';
+import { useToast } from '../context/useToast';
 import {
   getCategories,
   createCategory,

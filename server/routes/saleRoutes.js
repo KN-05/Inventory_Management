@@ -9,7 +9,7 @@ const { getSales, getSaleById, createSale, cancelSale, exportSales } = require('
 const { protect } = require('../middleware/authMiddleware');
 const { requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 router.use(protect);
 
@@ -35,7 +35,12 @@ const saleValidationRules = [
 router.get('/export', requirePermission(PERMISSIONS.SALES_VIEW), exportSales);
 router.get('/', requirePermission(PERMISSIONS.SALES_VIEW), getSales);
 router.get('/:id', requirePermission(PERMISSIONS.SALES_VIEW), getSaleById);
-router.post('/', requirePermission(PERMISSIONS.SALES_CREATE), saleValidationRules, validateRequest, createSale);
+router.post(
+  '/',
+  requirePermission(PERMISSIONS.SALES_CREATE),
+  runValidation(saleValidationRules),
+  createSale
+);
 // PHASE 8: cancelling a sale reverses stock + a customer's totals.
 // Admin + Manager both get PERMISSIONS.SALES_CANCEL (processing a
 // return/cancellation is a normal Manager task per the spec's "strong

@@ -4,8 +4,8 @@
 // permission at all, per the spec's Staff "Allowed" list.
 
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/useAuth';
+import { useToast } from '../context/useToast';
 import { getSupplierOptions, getProductOptions } from '../api/lookups';
 import {
   getPurchases,

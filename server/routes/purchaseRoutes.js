@@ -18,7 +18,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 router.use(protect);
 
@@ -45,27 +45,26 @@ router.get('/:id', requirePermission(PERMISSIONS.PURCHASES_VIEW), getPurchaseByI
 router.post(
   '/',
   requirePermission(PERMISSIONS.PURCHASES_CREATE),
-  purchaseValidationRules,
-  validateRequest,
+  runValidation(purchaseValidationRules),
   createPurchase
 );
 router.put(
   '/:id',
   requirePermission(PERMISSIONS.PURCHASES_UPDATE),
-  [
+  runValidation([
     body('items').optional().isArray({ min: 1 }),
     body('discount').optional().isFloat({ min: 0 }),
     body('tax').optional().isFloat({ min: 0 }),
     body('paymentStatus').optional().isIn(['unpaid', 'partial', 'paid']),
-  ],
-  validateRequest,
+  ]),
   updatePurchase
 );
 router.patch(
   '/:id/payment-status',
   requirePermission(PERMISSIONS.PURCHASES_UPDATE),
-  [body('paymentStatus').isIn(['unpaid', 'partial', 'paid']).withMessage('Invalid payment status')],
-  validateRequest,
+  runValidation([
+    body('paymentStatus').isIn(['unpaid', 'partial', 'paid']).withMessage('Invalid payment status'),
+  ]),
   updatePaymentStatus
 );
 router.post('/:id/receive', requirePermission(PERMISSIONS.PURCHASES_RECEIVE), receivePurchase);

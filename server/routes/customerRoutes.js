@@ -16,7 +16,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 router.use(protect);
 
@@ -33,15 +33,13 @@ router.get('/:id', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getCustomerByI
 router.post(
   '/',
   requirePermission(PERMISSIONS.CUSTOMERS_CREATE),
-  customerValidationRules,
-  validateRequest,
+  runValidation(customerValidationRules),
   createCustomer
 );
 router.put(
   '/:id',
   requirePermission(PERMISSIONS.CUSTOMERS_UPDATE),
-  customerValidationRules,
-  validateRequest,
+  runValidation(customerValidationRules),
   updateCustomer
 );
 router.delete('/:id', requirePermission(PERMISSIONS.CUSTOMERS_DELETE), deleteCustomer);

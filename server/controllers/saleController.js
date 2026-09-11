@@ -170,7 +170,11 @@ const createSale = asyncHandler(async (req, res) => {
     `Completed sale "${sale.invoiceNumber}" for ${formatAmount(totalAmount)}`,
     'sale'
   );
+  // PHASE 11 FIX: previously only notified 'admin' - Manager needs the
+  // same visibility into Sales as Purchases (same reasoning as the
+  // identical fix in purchaseController.js's createPurchase).
   await createNotification('admin', 'new_sale', `New sale ${sale.invoiceNumber} completed`, '/sales');
+  await createNotification('manager', 'new_sale', `New sale ${sale.invoiceNumber} completed`, '/sales');
 
   const populated = await Sale.findById(sale._id)
     .populate('customer', 'name phone')
@@ -232,12 +236,30 @@ const cancelSale = asyncHandler(async (req, res) => {
     `Cancelled sale "${sale.invoiceNumber}" - stock restored for ${sale.items.length} product(s)`,
     'sale'
   );
+  // PHASE 11: a cancelled sale reverses real stock/financial impact -
+  // worth flagging to both roles, same as a purchase being received.
+  await createNotification(
+    'admin',
+    'sale_cancelled',
+    `Sale "${sale.invoiceNumber}" was cancelled - stock restored`,
+    '/sales'
+  );
+  await createNotification(
+    'manager',
+    'sale_cancelled',
+    `Sale "${sale.invoiceNumber}" was cancelled - stock restored`,
+    '/sales'
+  );
 
   res.status(200).json({ success: true, message: 'Sale cancelled and stock restored', sale });
 });
 
+// PHASE 14 CONSISTENCY FIX: was "Rs. 500.00" - the rest of the app
+// (formatCurrency.js on the frontend) always shows "₹500.00". This string
+// only ever appears inside an ActivityLog message, but there's no reason
+// for it to look different from every other money value in the system.
 function formatAmount(amount) {
-  return `Rs. ${Number(amount).toFixed(2)}`;
+  return `₹${Number(amount).toFixed(2)}`;
 }
 
 // @desc   Export all sales as a CSV file - one row per line item, since a

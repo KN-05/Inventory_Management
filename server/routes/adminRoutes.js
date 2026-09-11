@@ -27,7 +27,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 router.use(protect);
 
@@ -37,35 +37,32 @@ router.get('/users', authorize('admin'), getUsers);
 router.post(
   '/users',
   authorize('admin'),
-  [
+  runValidation([
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('A valid email is required'),
     body('password')
       .isLength({ min: 6 })
       .withMessage('Password must be at least 6 characters'),
     body('role').isIn(['manager', 'staff']).withMessage("Role must be 'manager' or 'staff'"),
-  ],
-  validateRequest,
+  ]),
   createUser
 );
 
 router.patch(
   '/users/:id/status',
   authorize('admin'),
-  [body('isActive').isBoolean().withMessage('isActive must be true or false')],
-  validateRequest,
+  runValidation([body('isActive').isBoolean().withMessage('isActive must be true or false')]),
   updateUserStatus
 );
 
 router.patch(
   '/users/:id/role',
   authorize('admin'),
-  [
+  runValidation([
     body('role')
       .isIn(['admin', 'manager', 'staff'])
       .withMessage("Role must be 'admin', 'manager', or 'staff'"),
-  ],
-  validateRequest,
+  ]),
   updateUserRole
 );
 
@@ -91,12 +88,11 @@ router.get('/settings', authorize('admin'), getSettings);
 router.put(
   '/settings',
   authorize('admin'),
-  [
+  runValidation([
     body('companyName').optional().trim().notEmpty(),
     body('currency').optional().trim().notEmpty(),
     body('defaultLowStockThreshold').optional().isInt({ min: 0 }),
-  ],
-  validateRequest,
+  ]),
   updateSettings
 );
 

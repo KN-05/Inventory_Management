@@ -11,8 +11,8 @@
 // action in history is hidden for Staff (no SALES_CANCEL permission).
 
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/useAuth';
+import { useToast } from '../context/useToast';
 import { getProductOptions } from '../api/lookups';
 import { getCustomers, createCustomer } from '../api/customers';
 import { getSales, createSale, cancelSale, exportSalesCsv } from '../api/sales';

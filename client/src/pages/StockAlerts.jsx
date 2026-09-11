@@ -1,7 +1,7 @@
 // src/pages/StockAlerts.jsx
 
 import { useEffect, useState, useCallback } from 'react';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../context/useToast';
 import { getAlerts, resolveAlert } from '../api/alerts';
 import AlertList from '../components/alerts/AlertList';
 import Loader from '../components/common/Loader';

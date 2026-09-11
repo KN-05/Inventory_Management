@@ -25,7 +25,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
-const validateRequest = require('../middleware/validateMiddleware');
+const { runValidation } = require('../middleware/validateMiddleware');
 
 // PHASE 13: multer handles the multipart/form-data file upload for CSV
 // import. `memoryStorage` keeps the file in RAM as a Buffer (req.file.buffer)
@@ -94,9 +94,20 @@ const productValidationRules = [
 // below - otherwise Express would treat "export" as an :id value and
 // try (and fail) to look up a product with that id.
 router.get('/export', requirePermission(PERMISSIONS.PRODUCTS_VIEW), exportProducts);
-router.get('/', getProducts);
-router.get('/:id', getProductById);
-router.post('/', productValidationRules, validateRequest, createProduct);
+// PHASE 13 HARDENING: these previously relied on "every role happens to
+// have this permission" rather than checking it - functionally identical
+// today (Admin/Manager/Staff all have PRODUCTS_VIEW/CREATE/UPDATE), but
+// explicit checks mean a future role added without one of these
+// permissions is correctly blocked here, instead of silently getting
+// access because nobody remembered this route needed a check too.
+router.get('/', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProducts);
+router.get('/:id', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProductById);
+router.post(
+  '/',
+  requirePermission(PERMISSIONS.PRODUCTS_CREATE),
+  runValidation(productValidationRules),
+  createProduct
+);
 // PHASE 4 FIX: CSV import previously had no permission check at all,
 // meaning Staff could bulk-import products - directly against the spec's
 // "Staff - Not allowed: Bulk CSV/Excel import." Now enforced with the
@@ -107,7 +118,12 @@ router.post(
   upload.single('file'),
   importProducts
 );
-router.put('/:id', productValidationRules, validateRequest, updateProduct);
+router.put(
+  '/:id',
+  requirePermission(PERMISSIONS.PRODUCTS_UPDATE),
+  runValidation(productValidationRules),
+  updateProduct
+);
 // PHASE 6: gated by the same PRODUCTS_UPDATE permission as editing a
 // product's other fields - a photo is just another editable attribute.
 router.post(
@@ -116,16 +132,19 @@ router.post(
   productImageUpload.single('image'),
   uploadProductImage
 );
+// PHASE 13 HARDENING: same reasoning as above - INVENTORY_UPDATE is
+// granted to all three roles today, but these two routes had no explicit
+// permission check at all (relying purely on being logged in).
 router.patch(
   '/:id/increase-stock',
-  [body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0')],
-  validateRequest,
+  requirePermission(PERMISSIONS.INVENTORY_UPDATE),
+  runValidation([body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0')]),
   increaseStock
 );
 router.patch(
   '/:id/decrease-stock',
-  [body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0')],
-  validateRequest,
+  requirePermission(PERMISSIONS.INVENTORY_UPDATE),
+  runValidation([body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0')]),
   decreaseStock
 );
 // PHASE 7: available to every role that can view products at all (Admin,

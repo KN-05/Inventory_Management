@@ -4,8 +4,8 @@
 // spec's Staff Allowed list); only Admin/Manager can edit/delete.
 
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/useAuth';
+import { useToast } from '../context/useToast';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer, exportCustomersCsv } from '../api/customers';
 import { downloadBlob } from '../utils/downloadBlob';
 
