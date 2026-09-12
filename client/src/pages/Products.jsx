@@ -1,6 +1,7 @@
 // src/pages/Products.jsx
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
 import { getCategoryOptions, getSupplierOptions } from '../api/lookups';
@@ -37,7 +38,12 @@ function Products() {
   const [loadError, setLoadError] = useState(''); // persistent - page failed to load at all
 
   // Filters
-  const [search, setSearch] = useState('');
+  // PHASE 18: initialize `search` from ?search=... if the page was opened
+  // via the Navbar's global search (see components/layout/Navbar.jsx) -
+  // read once on mount, same as any deep link; the input stays fully
+  // editable afterwards like before.
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [category, setCategory] = useState('');
   const [supplier, setSupplier] = useState('');
   const [status, setStatus] = useState('');

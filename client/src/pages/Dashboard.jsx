@@ -15,6 +15,15 @@
 // they must not see the financial "Total Stock Value" figure at all. This
 // component is left exactly as it was for Admin/Manager; only the early
 // `isStaff` branch below is new.
+//
+// PHASE 18: visual refresh to match the reference SaaS design - a
+// time-of-day greeting, an icon on every stat card, and (Admin/Manager
+// only) two more REAL stat cards - Total Sales and Total Purchases - plus
+// a "Sales Overview" line chart. All three reuse the exact same
+// api/admin.js analytics calls the existing Analytics page already uses
+// (GET /api/admin/analytics/sales|purchases) - no new backend endpoint,
+// no invented numbers. If that extra fetch fails for any reason the two
+// cards/chart are simply omitted; the core summary above is unaffected.
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -23,17 +32,30 @@ import { useAuth } from '../context/useAuth';
 import { roleLabel } from '../utils/roleLabel';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getDashboardSummary } from '../api/dashboard';
+import { getSalesAnalytics, getPurchaseAnalytics } from '../api/admin';
 
 import StatCard from '../components/dashboard/StatCard';
 import StockChart from '../components/dashboard/StockChart';
+import SalesOverviewChart from '../components/dashboard/SalesOverviewChart';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import Loader from '../components/common/Loader';
 import StaffDashboard from './staff/StaffDashboard';
 
+// Plain, honest greeting based on the visitor's own clock - not a fake
+// personalization claim, just `new Date().getHours()`.
+function timeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
 function Dashboard() {
-  const { user, isManager, isStaff } = useAuth();
+  const { user, isAdmin, isManager, isStaff } = useAuth();
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
+  const [salesAnalytics, setSalesAnalytics] = useState(null);
+  const [purchaseAnalytics, setPurchaseAnalytics] = useState(null);
 
   // PHASE 5: Staff never need this Admin/Manager-shaped summary fetch at
   // all - they're handed off to <StaffDashboard /> below, which does its
@@ -46,62 +68,109 @@ function Dashboard() {
       .catch((err) => setError(err.response?.data?.message || 'Failed to load dashboard'));
   }, [isStaff]);
 
+  // PHASE 18: Sales/Purchase analytics power the two extra stat cards +
+  // the line chart, Admin/Manager only (same permission the Analytics
+  // page already requires). Fetched separately from the summary above so
+  // a failure here never blocks the core dashboard from rendering.
+  useEffect(() => {
+    if (isStaff || !(isAdmin || isManager)) return;
+    getSalesAnalytics().then(setSalesAnalytics).catch(() => {});
+    getPurchaseAnalytics().then(setPurchaseAnalytics).catch(() => {});
+  }, [isStaff, isAdmin, isManager]);
+
   // Hand off entirely to the dedicated, simplified Staff dashboard. Safe
   // to return early here since every hook above has already run.
   if (isStaff) {
     return <StaffDashboard />;
   }
 
-  // Same 7 numbers for every role - only the ORDER changes, so a Manager's
+  // Same numbers for every role - only the ORDER changes, so a Manager's
   // financial/operational priorities (stock value, alerts) lead instead of
   // raw counts. No data is hidden; this is purely a presentation choice.
+  const salesCard = salesAnalytics && {
+    key: 'totalSales',
+    label: 'Total Sales',
+    value: formatCurrency(salesAnalytics.totalRevenue),
+    tone: 'success',
+    icon: '💵',
+  };
+  const purchasesCard = purchaseAnalytics && {
+    key: 'totalPurchases',
+    label: 'Total Purchases',
+    value: formatCurrency(purchaseAnalytics.totalValue),
+    tone: 'default',
+    icon: '🧾',
+  };
+
   const statCards = isManager
     ? [
+        salesCard,
+        purchasesCard,
         {
           key: 'stockValue',
           label: 'Total Stock Value',
           value: formatCurrency(summary?.totalStockValue),
           tone: 'success',
+          icon: '💰',
         },
         {
           key: 'activeAlerts',
           label: 'Active Alerts',
           value: summary?.activeAlertsCount,
           tone: summary?.activeAlertsCount > 0 ? 'warning' : 'default',
+          icon: '🔔',
         },
-        { key: 'lowStock', label: 'Low Stock', value: summary?.stockStatusBreakdown.lowStock, tone: 'warning' },
-        { key: 'outOfStock', label: 'Out of Stock', value: summary?.stockStatusBreakdown.outOfStock, tone: 'danger' },
-        { key: 'totalProducts', label: 'Total Products', value: summary?.totalProducts },
-        { key: 'totalSuppliers', label: 'Total Suppliers', value: summary?.totalSuppliers },
-        { key: 'totalCategories', label: 'Total Categories', value: summary?.totalCategories },
-      ]
+        { key: 'lowStock', label: 'Low Stock', value: summary?.stockStatusBreakdown.lowStock, tone: 'warning', icon: '⚠️' },
+        {
+          key: 'outOfStock',
+          label: 'Out of Stock',
+          value: summary?.stockStatusBreakdown.outOfStock,
+          tone: 'danger',
+          icon: '🚫',
+        },
+        { key: 'totalProducts', label: 'Total Products', value: summary?.totalProducts, icon: '📦' },
+        { key: 'totalSuppliers', label: 'Total Suppliers', value: summary?.totalSuppliers, icon: '🚚' },
+        { key: 'totalCategories', label: 'Total Categories', value: summary?.totalCategories, icon: '🗂️' },
+      ].filter(Boolean)
     : [
-        { key: 'totalProducts', label: 'Total Products', value: summary?.totalProducts },
-        { key: 'lowStock', label: 'Low Stock', value: summary?.stockStatusBreakdown.lowStock, tone: 'warning' },
-        { key: 'outOfStock', label: 'Out of Stock', value: summary?.stockStatusBreakdown.outOfStock, tone: 'danger' },
-        { key: 'totalSuppliers', label: 'Total Suppliers', value: summary?.totalSuppliers },
-        { key: 'totalCategories', label: 'Total Categories', value: summary?.totalCategories },
+        { key: 'totalProducts', label: 'Total Products', value: summary?.totalProducts, icon: '📦' },
+        salesCard,
+        purchasesCard,
+        { key: 'lowStock', label: 'Low Stock', value: summary?.stockStatusBreakdown.lowStock, tone: 'warning', icon: '⚠️' },
+        {
+          key: 'outOfStock',
+          label: 'Out of Stock',
+          value: summary?.stockStatusBreakdown.outOfStock,
+          tone: 'danger',
+          icon: '🚫',
+        },
+        { key: 'totalSuppliers', label: 'Total Suppliers', value: summary?.totalSuppliers, icon: '🚚' },
+        { key: 'totalCategories', label: 'Total Categories', value: summary?.totalCategories, icon: '🗂️' },
         {
           key: 'activeAlerts',
           label: 'Active Alerts',
           value: summary?.activeAlertsCount,
           tone: summary?.activeAlertsCount > 0 ? 'warning' : 'default',
+          icon: '🔔',
         },
         {
           key: 'stockValue',
           label: 'Total Stock Value',
           value: formatCurrency(summary?.totalStockValue),
           tone: 'success',
+          icon: '💰',
         },
-      ];
+      ].filter(Boolean);
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Dashboard</h1>
+          <h1>
+            {timeGreeting()}, {user?.name} <span aria-hidden="true">👋</span>
+          </h1>
           <p className="page-subtitle">
-            Welcome back, <strong>{user?.name}</strong> ({roleLabel(user?.role)})
+            Here's what's happening with your inventory today. ({roleLabel(user?.role)})
           </p>
         </div>
         {isManager && (
@@ -119,14 +188,29 @@ function Dashboard() {
         <>
           <div className="stats-grid">
             {statCards.map((card, index) => (
-              <StatCard key={card.key} index={index} label={card.label} value={card.value} tone={card.tone} />
+              <StatCard
+                key={card.key}
+                index={index}
+                label={card.label}
+                value={card.value}
+                tone={card.tone}
+                icon={card.icon}
+              />
             ))}
           </div>
 
-          <StockChart
-            stockStatusBreakdown={summary.stockStatusBreakdown}
-            categoryBreakdown={summary.categoryBreakdown}
-          />
+          {salesAnalytics && (
+            <div style={{ marginTop: '1rem' }}>
+              <SalesOverviewChart daily={salesAnalytics.daily} />
+            </div>
+          )}
+
+          <div style={{ marginTop: '1rem' }}>
+            <StockChart
+              stockStatusBreakdown={summary.stockStatusBreakdown}
+              categoryBreakdown={summary.categoryBreakdown}
+            />
+          </div>
 
           <motion.div
             className="chart-card"
@@ -145,3 +229,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+

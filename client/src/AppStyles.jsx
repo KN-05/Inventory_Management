@@ -1715,6 +1715,7 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  flex: 1;
 }
 
 .sidebar-section-label {
@@ -1752,6 +1753,86 @@ a:focus-visible {
   background: var(--sidebar-bg-active);
   color: var(--sidebar-text-active);
   border-left-color: var(--sidebar-accent, #ffffff);
+}
+
+.sidebar-link-icon {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* PHASE 18: bottom user card - sits at the end of the sidebar (the
+   sidebar is a column flex container with .sidebar-nav set to flex: 1
+   above, so this naturally lands at the bottom). */
+.sidebar-user-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-user-name {
+  color: #fff;
+  font-size: 0.83rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.72rem;
+}
+
+.sidebar-logout-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) ease;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .sidebar-backdrop {
@@ -1793,6 +1874,37 @@ a:focus-visible {
 
 .navbar-spacer {
   flex: 1;
+}
+
+.navbar-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  max-width: 320px;
+  width: 100%;
+}
+
+.navbar-search-icon {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.navbar-search input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.85rem;
+  width: 100%;
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.navbar-search input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .navbar-user {
@@ -2619,6 +2731,30 @@ button:disabled {
   box-shadow: var(--neu-shadow-lg);
 }
 
+.stat-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  background: var(--color-primary-bg);
+  margin-bottom: 0.6rem;
+}
+
+.stat-card-icon-warning {
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+}
+
+.stat-card-icon-danger {
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.stat-card-icon-success {
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+}
+
 .stat-card-label {
   margin: 0 0 0.35rem;
   font-size: 0.78rem;
@@ -2726,6 +2862,24 @@ button:disabled {
   font-size: 0.86rem;
 }
 
+.activity-text {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.activity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--color-primary-bg);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
 .activity-list li:last-child {
   border-bottom: none;
 }
@@ -2823,7 +2977,7 @@ button:disabled {
     display: flex;
   }
 
-  .navbar-user-name {
+  .navbar-search {
     display: none;
   }
 }

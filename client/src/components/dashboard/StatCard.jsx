@@ -3,10 +3,16 @@
 // Animation (Phase 1 revision): entrance fade/slide and hover-lift are
 // done with Framer Motion instead of CSS @keyframes/transitions - the
 // `index` prop staggers each card's entrance by a small delay.
+//
+// PHASE 18: added an optional `icon` prop (a small emoji/glyph shown in a
+// colored circular badge above the label) to match the reference design's
+// icon-led stat cards. Purely additive - every existing caller that
+// doesn't pass `icon` renders exactly as before, so other pages reusing
+// this component (Reports, Analytics, Stock Alerts, etc.) are unaffected.
 
 import { motion } from 'framer-motion';
 
-function StatCard({ label, value, tone = 'default', index = 0 }) {
+function StatCard({ label, value, tone = 'default', index = 0, icon }) {
   return (
     <motion.div
       className={`stat-card stat-card-${tone}`}
@@ -15,6 +21,7 @@ function StatCard({ label, value, tone = 'default', index = 0 }) {
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1], delay: index * 0.04 }}
       whileHover={{ y: -2 }}
     >
+      {icon && <span className={`stat-card-icon stat-card-icon-${tone}`}>{icon}</span>}
       <p className="stat-card-label">{label}</p>
       <p className="stat-card-value">{value}</p>
     </motion.div>
@@ -22,3 +29,4 @@ function StatCard({ label, value, tone = 'default', index = 0 }) {
 }
 
 export default StatCard;
+
