@@ -2843,7 +2843,7 @@ button:disabled {
    ========================================================================== */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -2902,10 +2902,14 @@ button:disabled {
 .stat-card-value {
   margin: 0;
   font-family: var(--font-mono);
-  /* BUGFIX: fixed 1.5rem was too big for long currency values in a
-     narrow card - clamp() scales it down on smaller cards/screens
-     instead of letting the text run past the card's edge. */
-  font-size: clamp(1.05rem, 1.1vw + 0.75rem, 1.5rem);
+  /* FIX: large currency values like "₹37,40,000.00" were wrapping onto a
+     second line inside the card, making the row look uneven - lowered
+     the max size (was 1.5rem) so long amounts fit on one line at normal
+     card widths; clamp() still scales it down further on narrow/mobile
+     cards, and overflow-wrap below is the safety net if it ever still
+     needs to wrap on a very small screen, rather than forcing nowrap and
+     risking the value getting clipped by the card's overflow:hidden. */
+  font-size: clamp(0.95rem, 0.55vw + 0.78rem, 1.2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;

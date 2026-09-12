@@ -1,11 +1,17 @@
 // src/pages/admin/Reports.jsx
 // Admin-only: stock report (category breakdown + low/out-of-stock lists)
 // and supplier-wise report (product count + stock value per supplier).
+//
+// PHASE 23: stat cards now use the shared <StatCard> component (with an
+// icon) instead of raw <div className="stat-card"> markup - same real
+// numbers from getStockReport()/getSupplierReport(), purely a visual/
+// consistency change so this page matches Dashboard/Products/Stock Alerts.
 
 import { useEffect, useState } from 'react';
 import { getStockReport, getSupplierReport } from '../../api/admin';
 import { formatCurrency } from '../../utils/formatCurrency';
 import Loader from '../../components/common/Loader';
+import StatCard from '../../components/dashboard/StatCard';
 
 function Reports() {
   const [stockReport, setStockReport] = useState(null);
@@ -37,18 +43,15 @@ function Reports() {
           <div className="chart-card" style={{ marginBottom: '1rem' }}>
             <h3>Stock Report</h3>
             <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-              <div className="stat-card">
-                <p className="stat-card-label">Total Products</p>
-                <p className="stat-card-value">{stockReport.totals.totalProducts}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-card-label">Total Quantity</p>
-                <p className="stat-card-value">{stockReport.totals.totalQuantity}</p>
-              </div>
-              <div className="stat-card stat-card-success">
-                <p className="stat-card-label">Total Stock Value</p>
-                <p className="stat-card-value">{formatCurrency(stockReport.totals.totalValue)}</p>
-              </div>
+              <StatCard index={0} icon="📦" label="Total Products" value={stockReport.totals.totalProducts} />
+              <StatCard index={1} icon="🔢" label="Total Quantity" value={stockReport.totals.totalQuantity} />
+              <StatCard
+                index={2}
+                icon="💰"
+                tone="success"
+                label="Total Stock Value"
+                value={formatCurrency(stockReport.totals.totalValue)}
+              />
             </div>
 
             <h4>By Category</h4>

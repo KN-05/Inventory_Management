@@ -4,6 +4,12 @@
 // stock value, category/supplier breakdown - built in earlier phases),
 // matching the spec's sidebar having both "Reports" and "Analytics" as
 // distinct items. Admin + Manager only, per ANALYTICS_VIEW.
+//
+// PHASE 23: stat cards now use the shared <StatCard> component (icon +
+// consistent styling, same as Dashboard/Reports/Stock Alerts) instead of
+// raw markup, and the daily/weekly/monthly switcher reuses the same
+// segmented-tab look introduced for Sales/Billing (`.pos-tab`) instead of
+// two different-looking buttons - no new CSS, no behavior change.
 
 import { useEffect, useState } from 'react';
 import {
@@ -21,6 +27,7 @@ import {
 import { getSalesAnalytics, getPurchaseAnalytics, getProfitAnalytics } from '../../api/admin';
 import { formatCurrency } from '../../utils/formatCurrency';
 import Loader from '../../components/common/Loader';
+import StatCard from '../../components/dashboard/StatCard';
 
 function Analytics() {
   const [sales, setSales] = useState(null);
@@ -74,23 +81,17 @@ function Analytics() {
       <div className="chart-card" style={{ marginBottom: '1rem' }}>
         <h3>Sales Analytics</h3>
         <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <div className="stat-card">
-            <p className="stat-card-label">Total Orders</p>
-            <p className="stat-card-value">{sales.totalOrders}</p>
-          </div>
-          <div className="stat-card stat-card-success">
-            <p className="stat-card-label">Total Revenue</p>
-            <p className="stat-card-value">{formatCurrency(sales.totalRevenue)}</p>
-          </div>
+          <StatCard index={0} icon="🧾" label="Total Orders" value={sales.totalOrders} />
+          <StatCard index={1} icon="💵" tone="success" label="Total Revenue" value={formatCurrency(sales.totalRevenue)} />
         </div>
 
-        <div className="filters-bar" style={{ marginBottom: '0.5rem' }}>
+        <div className="pos-tabs" style={{ marginBottom: '0.75rem' }}>
           {['daily', 'weekly', 'monthly'].map((g) => (
             <button
               key={g}
-              className={salesGranularity === g ? 'btn-primary' : 'btn-secondary'}
-              onClick={() => setSalesGranularity(g)}
               type="button"
+              className={`pos-tab${salesGranularity === g ? ' pos-tab-active' : ''}`}
+              onClick={() => setSalesGranularity(g)}
             >
               {g.charAt(0).toUpperCase() + g.slice(1)}
             </button>
@@ -143,14 +144,14 @@ function Analytics() {
       <div className="chart-card" style={{ marginBottom: '1rem' }}>
         <h3>Purchase Analytics</h3>
         <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <div className="stat-card">
-            <p className="stat-card-label">Received Purchase Orders</p>
-            <p className="stat-card-value">{purchases.totalPurchases}</p>
-          </div>
-          <div className="stat-card stat-card-warning">
-            <p className="stat-card-label">Total Purchase Value</p>
-            <p className="stat-card-value">{formatCurrency(purchases.totalValue)}</p>
-          </div>
+          <StatCard index={0} icon="📦" label="Received Purchase Orders" value={purchases.totalPurchases} />
+          <StatCard
+            index={1}
+            icon="🧾"
+            tone="warning"
+            label="Total Purchase Value"
+            value={formatCurrency(purchases.totalValue)}
+          />
         </div>
 
         {purchases.monthly.length === 0 ? (
@@ -198,18 +199,9 @@ function Analytics() {
         {profit.note && <p className="banner banner-warning">{profit.note}</p>}
 
         <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <div className="stat-card">
-            <p className="stat-card-label">Total Revenue</p>
-            <p className="stat-card-value">{formatCurrency(profit.totals.totalRevenue)}</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-card-label">Total Cost</p>
-            <p className="stat-card-value">{formatCurrency(profit.totals.totalCost)}</p>
-          </div>
-          <div className="stat-card stat-card-success">
-            <p className="stat-card-label">Total Profit</p>
-            <p className="stat-card-value">{formatCurrency(profit.totals.totalProfit)}</p>
-          </div>
+          <StatCard index={0} icon="💵" label="Total Revenue" value={formatCurrency(profit.totals.totalRevenue)} />
+          <StatCard index={1} icon="💸" label="Total Cost" value={formatCurrency(profit.totals.totalCost)} />
+          <StatCard index={2} icon="📈" tone="success" label="Total Profit" value={formatCurrency(profit.totals.totalProfit)} />
         </div>
 
         {profit.monthly.length > 0 && (
