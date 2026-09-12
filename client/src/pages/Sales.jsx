@@ -216,164 +216,198 @@ function Sales() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Sales</h1>
+        <h1>Sales / Billing</h1>
       </div>
 
-      <div className="filters-bar" style={{ marginBottom: '1rem' }}>
-        <Button variant={tab === 'new' ? 'primary' : 'secondary'} type="button" onClick={() => setTab('new')}>
-          New Sale
-        </Button>
-        <Button
-          variant={tab === 'history' ? 'primary' : 'secondary'}
+      {/* PHASE 20: proper segmented tab control (was two full Buttons side
+          by side) - same setTab('new'|'history') calls, purely visual. */}
+      <div className="pos-tabs">
+        <button
           type="button"
+          className={`pos-tab${tab === 'new' ? ' pos-tab-active' : ''}`}
+          onClick={() => setTab('new')}
+        >
+          🛒 New Sale
+        </button>
+        <button
+          type="button"
+          className={`pos-tab${tab === 'history' ? ' pos-tab-active' : ''}`}
           onClick={() => setTab('history')}
         >
-          Sales History
-        </Button>
+          🧾 Sales History
+        </button>
       </div>
 
       {tab === 'new' && (
         <>
           {checkoutError && <p className="banner banner-error">{checkoutError}</p>}
 
-          <div className="form-row" style={{ alignItems: 'flex-end' }}>
-            <div>
-              <label>Search product by name, SKU, or scan barcode + Enter</label>
-              <input
-                type="text"
-                value={productQuery}
-                onChange={(e) => setProductQuery(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Type or scan..."
-              />
+          <div className="chart-card">
+            <h3>Add a product</h3>
+            <div className="form-row" style={{ alignItems: 'flex-end' }}>
+              <div>
+                <label>Search by name, SKU, or scan barcode + Enter</label>
+                <input
+                  type="text"
+                  value={productQuery}
+                  onChange={(e) => setProductQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Type or scan..."
+                />
+              </div>
+              <div>
+                <label>Or pick from list</label>
+                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
+                  <option value="">Select a product</option>
+                  {filteredProducts.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.sku}) - {p.quantity} in stock
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button variant="secondary" type="button" onClick={handleAddSelected} disabled={!selectedProductId}>
+                + Add to Cart
+              </Button>
             </div>
-            <div>
-              <label>Or pick from list</label>
-              <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                <option value="">Select a product</option>
-                {filteredProducts.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name} ({p.sku}) - {p.quantity} in stock
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button variant="secondary" type="button" onClick={handleAddSelected} disabled={!selectedProductId}>
-              + Add to Cart
-            </Button>
           </div>
 
-          {cart.length === 0 ? (
-            <p className="empty-state" style={{ marginTop: '1rem' }}>
-              Cart is empty. Search or select a product above to start a sale.
-            </p>
-          ) : (
-            <table className="data-table" style={{ marginTop: '1rem' }}>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th className="col-numeric">Qty</th>
-                  <th className="col-numeric">Unit Price</th>
-                  <th className="col-numeric">Subtotal</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {cart.map((line) => (
-                  <tr key={line.product._id}>
-                    <td>{line.product.name}</td>
-                    <td className="cell-numeric">
-                      <input
-                        type="number"
-                        min="1"
-                        max={line.product.quantity}
-                        value={line.quantity}
-                        onChange={(e) => updateCartLine(line.product._id, 'quantity', e.target.value)}
-                        style={{ width: '70px' }}
-                      />
-                    </td>
-                    <td className="cell-numeric">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={line.sellingPrice}
-                        onChange={(e) => updateCartLine(line.product._id, 'sellingPrice', e.target.value)}
-                        style={{ width: '90px' }}
-                      />
-                    </td>
-                    <td className="cell-numeric">
-                      {formatCurrency((Number(line.quantity) || 0) * (Number(line.sellingPrice) || 0))}
-                    </td>
-                    <td>
-                      <button className="btn-link btn-link-danger" onClick={() => removeCartLine(line.product._id)}>
-                        Remove
-                      </button>
-                    </td>
+          <div className="chart-card" style={{ marginTop: '1rem' }}>
+            <h3>
+              Cart {cart.length > 0 && <span className="pos-cart-count">{cart.length}</span>}
+            </h3>
+            {cart.length === 0 ? (
+              <p className="empty-state">🛒 Cart is empty. Search or select a product above to start a sale.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th className="col-numeric">Qty</th>
+                    <th className="col-numeric">Unit Price</th>
+                    <th className="col-numeric">Subtotal</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          <div className="form-row" style={{ marginTop: '1rem', alignItems: 'flex-end' }}>
-            <div>
-              <label>Customer (optional)</label>
-              <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-                <option value="">Walk-in Customer</option>
-                {customers.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button variant="secondary" type="button" onClick={() => setCustomerFormOpen(true)}>
-              + New Customer
-            </Button>
+                </thead>
+                <tbody>
+                  {cart.map((line) => (
+                    <tr key={line.product._id}>
+                      <td>{line.product.name}</td>
+                      <td className="cell-numeric">
+                        <input
+                          type="number"
+                          min="1"
+                          max={line.product.quantity}
+                          value={line.quantity}
+                          onChange={(e) => updateCartLine(line.product._id, 'quantity', e.target.value)}
+                          style={{ width: '70px' }}
+                        />
+                      </td>
+                      <td className="cell-numeric">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={line.sellingPrice}
+                          onChange={(e) => updateCartLine(line.product._id, 'sellingPrice', e.target.value)}
+                          style={{ width: '90px' }}
+                        />
+                      </td>
+                      <td className="cell-numeric">
+                        {formatCurrency((Number(line.quantity) || 0) * (Number(line.sellingPrice) || 0))}
+                      </td>
+                      <td>
+                        <button className="btn-link btn-link-danger" onClick={() => removeCartLine(line.product._id)}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
-          <div className="form-row" style={{ marginTop: '0.75rem' }}>
-            <div>
-              <label>Discount (₹)</label>
-              <input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+          <div className="chart-card" style={{ marginTop: '1rem' }}>
+            <h3>Order details</h3>
+            <div className="form-row" style={{ alignItems: 'flex-end' }}>
+              <div>
+                <label>Customer (optional)</label>
+                <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                  <option value="">Walk-in Customer</option>
+                  {customers.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button variant="secondary" type="button" onClick={() => setCustomerFormOpen(true)}>
+                + New Customer
+              </Button>
             </div>
-            <div>
-              <label>Tax (₹)</label>
-              <input type="number" min="0" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
-            </div>
-            <div>
-              <label>Payment Method</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option>Cash</option>
-                <option>Card</option>
-                <option>UPI</option>
-                <option>Bank Transfer</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div>
-              <label>Payment Status</label>
-              <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-              </select>
-            </div>
-          </div>
 
-          <p className="page-subtitle" style={{ textAlign: 'right', fontSize: '1.1rem', fontWeight: 700, marginTop: '0.75rem' }}>
-            Total: {formatCurrency(grandTotal)}
-          </p>
+            <div className="form-row" style={{ marginTop: '0.75rem' }}>
+              <div>
+                <label>Discount (₹)</label>
+                <input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+              </div>
+              <div>
+                <label>Tax (₹)</label>
+                <input type="number" min="0" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
+              </div>
+              <div>
+                <label>Payment Method</label>
+                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                  <option>Cash</option>
+                  <option>Card</option>
+                  <option>UPI</option>
+                  <option>Bank Transfer</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label>Payment Status</label>
+                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+            </div>
 
-          <div className="modal-actions" style={{ justifyContent: 'flex-end' }}>
-            <Button
-              variant="primary"
-              type="button"
-              onClick={handleCheckout}
-              disabled={cart.length === 0 || checkingOut}
-            >
-              {checkingOut ? 'Processing...' : 'Complete Sale'}
-            </Button>
+            {/* PHASE 20: receipt-style breakdown instead of a single bare
+                "Total: X" line - every figure here was already being
+                computed above (itemsTotal/discount/tax/grandTotal), just
+                not all shown individually before. */}
+            <div className="pos-summary">
+              <div className="pos-summary-row">
+                <span>Subtotal</span>
+                <span>{formatCurrency(itemsTotal)}</span>
+              </div>
+              <div className="pos-summary-row">
+                <span>Discount</span>
+                <span>- {formatCurrency(discount || 0)}</span>
+              </div>
+              <div className="pos-summary-row">
+                <span>Tax</span>
+                <span>+ {formatCurrency(tax || 0)}</span>
+              </div>
+              <div className="pos-summary-row pos-summary-total">
+                <span>Total</span>
+                <span>{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+
+            <div className="modal-actions" style={{ justifyContent: 'flex-end' }}>
+              <Button
+                variant="primary"
+                type="button"
+                onClick={handleCheckout}
+                disabled={cart.length === 0 || checkingOut}
+              >
+                {checkingOut ? 'Processing...' : 'Complete Sale'}
+              </Button>
+            </div>
           </div>
         </>
       )}
@@ -382,13 +416,18 @@ function Sales() {
         <>
           {historyError && <p className="banner banner-error">{historyError}</p>}
           <div className="filters-bar" style={{ marginBottom: '1rem' }}>
-            <input
-              type="text"
-              placeholder="Search by invoice number..."
-              value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
-              className="filters-search"
-            />
+            <div className="filters-search-wrap">
+              <span className="filters-search-icon" aria-hidden="true">
+                🔍
+              </span>
+              <input
+                type="text"
+                placeholder="Search by invoice number..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="filters-search"
+              />
+            </div>
             <Button variant="secondary" type="button" onClick={handleExport}>
               Export CSV
             </Button>

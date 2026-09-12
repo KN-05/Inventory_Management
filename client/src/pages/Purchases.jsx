@@ -174,13 +174,18 @@ function Purchases() {
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
       <div className="filters-bar">
-        <input
-          type="text"
-          placeholder="Search by PO number..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="filters-search"
-        />
+        <div className="filters-search-wrap">
+          <span className="filters-search-icon" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            type="text"
+            placeholder="Search by PO number..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="filters-search"
+          />
+        </div>
         <select value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)}>
           <option value="">All Suppliers</option>
           {suppliers.map((s) => (

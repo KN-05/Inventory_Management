@@ -2,6 +2,10 @@
 // Search bar + dropdown filters for the Products page.
 // This component is "controlled" - it doesn't hold its own state, it just
 // reports changes up to the parent (Products.jsx) via the callbacks passed in.
+//
+// PHASE 19: search input now sits in an icon wrapper (matches the
+// reference design's pill-style search field) - purely a markup/CSS
+// change, the same onSearchChange callback still fires on every keystroke.
 
 function ProductFilters({
   search,
@@ -17,13 +21,18 @@ function ProductFilters({
 }) {
   return (
     <div className="filters-bar">
-      <input
-        type="text"
-        placeholder="Search by name or SKU..."
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className="filters-search"
-      />
+      <div className="filters-search-wrap">
+        <span className="filters-search-icon" aria-hidden="true">
+          🔍
+        </span>
+        <input
+          type="text"
+          placeholder="Search by name, SKU, or barcode..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="filters-search"
+        />
+      </div>
 
       <select value={category} onChange={(e) => onCategoryChange(e.target.value)}>
         <option value="">All Categories</option>
@@ -54,3 +63,4 @@ function ProductFilters({
 }
 
 export default ProductFilters;
+

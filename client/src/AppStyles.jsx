@@ -2155,6 +2155,28 @@ a:focus-visible {
   font-weight: 700;
 }
 
+/* PHASE 21: small round initials avatar for name cells that have no
+   photo (Customers table) - a lighter-weight sibling of .table-thumb. */
+.cell-with-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.table-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary-gradient);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 /* PHASE 6: Product Details modal - simple two-column key/value grid */
 .detail-grid {
   display: grid;
@@ -2235,8 +2257,9 @@ a:focus-visible {
 
 .page-header h1 {
   margin: 0;
-  font-size: 1.4rem;
-  letter-spacing: -0.01em;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
 .page-subtitle {
@@ -2414,6 +2437,103 @@ button:disabled {
   box-shadow: var(--neu-shadow-inset), 0 0 0 2px var(--color-primary);
 }
 
+/* PHASE 19: optional icon wrapper around .filters-search (currently used
+   by Products) - .filters-search itself is unchanged so every other page
+   using it bare (Sales, Categories, Customers, Suppliers, Purchases,
+   Analytics, Activity Logs, Stock Alerts) looks exactly as before. */
+.filters-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+}
+
+.filters-search-wrap .filters-search {
+  width: 100%;
+  padding-left: 2.1rem;
+}
+
+.filters-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  font-size: 0.8rem;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   PHASE 20: Sales / Billing (POS) screen
+   ========================================================================== */
+.pos-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  background: var(--color-bg);
+  padding: 0.3rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--neu-shadow-inset);
+  margin-bottom: 1.25rem;
+}
+
+.pos-tab {
+  border: none;
+  background: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: calc(var(--radius-sm) - 2px);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.pos-tab-active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--neu-shadow);
+}
+
+.pos-cart-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 0.4rem;
+}
+
+.pos-summary {
+  max-width: 320px;
+  margin: 1.25rem 0 0 auto;
+  padding: 0.9rem 1rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+.pos-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+  padding: 0.3rem 0;
+}
+
+.pos-summary-total {
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.3rem;
+  padding-top: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 .filters-bar select {
   padding: 0.5rem 0.65rem;
   border: none;
@@ -2540,13 +2660,28 @@ button:disabled {
    Badges
    ========================================================================== */
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 600;
   background: var(--color-bg);
   box-shadow: var(--neu-shadow-inset);
+}
+
+/* PHASE 19: small colored status dot in front of the badge text (In
+   Stock / Low Stock / Out of Stock, etc.) for quicker visual scanning -
+   uses currentColor so it automatically matches whichever badge-* color
+   modifier is applied, no per-badge color duplication needed. */
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .badge-green {

@@ -1,4 +1,7 @@
 // src/components/customers/CustomerTable.jsx
+//
+// PHASE 21: added a small initials avatar before each customer's name -
+// purely visual (same pattern as the Sidebar/Navbar avatars), no new data.
 
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -29,7 +32,12 @@ function CustomerTable({ customers, canManage, onEdit, onDelete }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
-            <td>{c.name}</td>
+            <td>
+              <span className="cell-with-avatar">
+                <span className="table-avatar">{c.name?.[0]?.toUpperCase() || '?'}</span>
+                {c.name}
+              </span>
+            </td>
             <td>{c.phone || '-'}</td>
             <td>{c.email || '-'}</td>
             <td>{c.city || '-'}</td>
@@ -57,3 +65,4 @@ function CustomerTable({ customers, canManage, onEdit, onDelete }) {
 }
 
 export default CustomerTable;
+

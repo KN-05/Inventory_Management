@@ -8,6 +8,11 @@
 // ProductDetailsModal via onView) so every role - including Staff, who
 // can't edit as freely as Admin/Manager elsewhere in the app - has a
 // clear way to see full product details, per the Phase 5 Staff spec too.
+//
+// PHASE 19: added a Barcode column - `barcode` is a REAL field the
+// backend already auto-generates and returns on every product (see
+// models/Product.js / productController.js), it just wasn't shown in
+// this table before. No new data, purely surfacing what's already there.
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -49,6 +54,7 @@ function ProductTable({ products, isAdmin, onEdit, onDelete, onAdjustStock, onVi
           <th></th>
           <th>Name</th>
           <th>SKU</th>
+          <th>Barcode</th>
           <th>Category</th>
           <th>Supplier</th>
           <th className="col-numeric">Quantity</th>
@@ -76,6 +82,7 @@ function ProductTable({ products, isAdmin, onEdit, onDelete, onAdjustStock, onVi
             </td>
             <td>{p.name}</td>
             <td className="cell-mono">{p.sku}</td>
+            <td className="cell-mono">{p.barcode || '-'}</td>
             <td>{p.category?.name || '-'}</td>
             <td>{p.supplier?.name || '-'}</td>
             <td className="cell-numeric">{p.quantity}</td>
@@ -123,3 +130,4 @@ function ProductTable({ products, isAdmin, onEdit, onDelete, onAdjustStock, onVi
 }
 
 export default ProductTable;
+
