@@ -14,6 +14,11 @@
 // models/Product.js / productController.js), it just wasn't shown in
 // this table before. No new data, purely surfacing what's already there.
 
+// PHASE 25: `canManage` (Admin + Manager only, per PRODUCTS_CREATE/
+// UPDATE/DELETE) now gates BOTH Edit and Delete - Edit was previously
+// shown to every role even though the backend has always rejected Staff
+// on PUT /products/:id; this makes the button match the real permission.
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -25,7 +30,7 @@ const statusClass = {
   'Out of Stock': 'badge badge-red',
 };
 
-function ProductTable({ products, isAdmin, onEdit, onDelete, onAdjustStock, onView }) {
+function ProductTable({ products, canManage, onEdit, onDelete, onAdjustStock, onView }) {
   // Tracks which product row has its small stock-adjust input open
   const [adjustingId, setAdjustingId] = useState(null);
   const [amount, setAmount] = useState('');
@@ -113,10 +118,12 @@ function ProductTable({ products, isAdmin, onEdit, onDelete, onAdjustStock, onVi
               <button className="btn-link" onClick={() => onView(p)}>
                 View
               </button>
-              <button className="btn-link" onClick={() => onEdit(p)}>
-                Edit
-              </button>
-              {isAdmin && (
+              {canManage && (
+                <button className="btn-link" onClick={() => onEdit(p)}>
+                  Edit
+                </button>
+              )}
+              {canManage && (
                 <button className="btn-link btn-link-danger" onClick={() => onDelete(p)}>
                   Delete
                 </button>

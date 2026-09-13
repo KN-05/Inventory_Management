@@ -13,6 +13,7 @@ const {
   updateProfile,
   uploadPhoto,
   changePassword,
+  verifyPassword,
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/authMiddleware');
 const { runValidation } = require('../middleware/validateMiddleware');
@@ -72,6 +73,19 @@ router.put(
       .withMessage('New password must be at least 6 characters'),
   ]),
   changePassword
+);
+
+// PHASE 25: re-confirms the logged-in user's OWN password before a
+// sensitive frontend action (add/edit product, CSV import) proceeds -
+// see PasswordConfirmModal.jsx. Deliberately no extra permission check
+// beyond `protect` above - any logged-in user can confirm THEIR OWN
+// password; the actual product create/update/import routes still enforce
+// PRODUCTS_CREATE/PRODUCTS_UPDATE/IMPORTS_CREATE separately either way,
+// so this can never be used to bypass that.
+router.post(
+  '/verify-password',
+  runValidation([body('password').notEmpty().withMessage('Password is required')]),
+  verifyPassword
 );
 
 module.exports = router;

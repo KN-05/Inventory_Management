@@ -84,6 +84,21 @@ const userSchema = new mongoose.Schema(
       select: false,
       default: null,
     },
+    // PHASE 26: Manager-initiated Staff password reset. When a Manager
+    // resets a Staff member's password, a 6-digit OTP is emailed to that
+    // Staff member's OWN registered email (not the Manager's, not an
+    // Admin's) - the same "store only a hash, never the raw code"
+    // principle as passwordResetTokenHash above.
+    staffResetOtpHash: {
+      type: String,
+      select: false,
+      default: null,
+    },
+    staffResetOtpExpires: {
+      type: Date,
+      select: false,
+      default: null,
+    },
   },
   { timestamps: true }
 );

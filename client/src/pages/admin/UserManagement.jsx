@@ -7,10 +7,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
-import { getUsers, createUser, updateUserStatus, updateUserRole } from '../../api/admin';
+import { getUsers, createUser, updateUserStatus, updateUserRole, adminResetPassword } from '../../api/admin';
 import { roleLabel } from '../../utils/roleLabel';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+import AnimatedModal from '../../components/common/AnimatedModal';
 import CreateUserForm from './CreateUserForm';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(
@@ -27,6 +28,13 @@ function UserManagement() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState('');
+
+  // PHASE 26: Admin directly resets any other user's password - no OTP,
+  // since the Admin doing this is already fully authenticated.
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -78,6 +86,27 @@ function UserManagement() {
       loadUsers();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update role');
+    }
+  };
+
+  const openResetPassword = (targetUser) => {
+    setResetTarget(targetUser);
+    setResetPassword('');
+    setResetError('');
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setResetting(true);
+    try {
+      await adminResetPassword(resetTarget._id, resetPassword);
+      toast.success(`Password reset for ${resetTarget.name}`);
+      setResetTarget(null);
+    } catch (err) {
+      setResetError(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -157,6 +186,11 @@ function UserManagement() {
                     >
                       {u.isActive ? 'Deactivate' : 'Activate'}
                     </button>
+                    {!isSelf && (
+                      <button className="btn-link" onClick={() => openResetPassword(u)}>
+                        Reset Password
+                      </button>
+                    )}
                   </td>
                 </motion.tr>
               );
@@ -171,6 +205,43 @@ function UserManagement() {
         onCancel={() => setCreateOpen(false)}
         error={createError}
       />
+
+      {/* PHASE 26: Admin's direct "Reset Password" - no OTP step, since
+          only an already-authenticated Admin can reach this page/action.
+          Manager -> Staff resets go through the separate OTP-gated flow
+          on the Staff Passwords page instead (see StaffPasswords.jsx). */}
+      <AnimatedModal open={!!resetTarget} onClose={() => setResetTarget(null)} maxWidth={380}>
+        <h2>Reset password for {resetTarget?.name}</h2>
+        <p className="page-subtitle" style={{ marginBottom: '1rem' }}>
+          Set a new password for this account. They'll need to use it the next time they log in.
+        </p>
+        <form onSubmit={handleResetPassword}>
+          {resetError && <p className="form-error">{resetError}</p>}
+          <div className="form-row">
+            <div>
+              <label htmlFor="reset-password-input">New password</label>
+              <input
+                id="reset-password-input"
+                type="password"
+                autoFocus
+                minLength={6}
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                required
+              />
+            </div>
+          </div>
+          <div className="modal-actions">
+            <Button variant="secondary" type="button" onClick={() => setResetTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={resetting}>
+              {resetting ? 'Resetting...' : 'Reset Password'}
+            </Button>
+          </div>
+        </form>
+      </AnimatedModal>
     </div>
   );
 }

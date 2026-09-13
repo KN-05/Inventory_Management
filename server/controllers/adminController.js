@@ -11,8 +11,10 @@
 // Admin-only: user management and reports.
 
 const asyncHandler = require('../utils/asyncHandler');
+const crypto = require('crypto');
 const logActivity = require('../utils/logActivity');
 const createNotification = require('../utils/createNotification');
+const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
@@ -145,6 +147,146 @@ const updateUserRole = asyncHandler(async (req, res) => {
   await logActivity(req.user._id, `Changed "${user.name}"'s role to ${role}`, 'user');
 
   res.status(200).json({ success: true, message: 'User role updated', user });
+});
+
+// @desc   Admin directly sets a NEW password for any user - no OTP step,
+//         since an Admin is already fully authenticated (this endpoint
+//         itself is behind `protect` + authorize('admin')). Kept
+//         separate from the Manager -> Staff OTP flow below, which is
+//         specifically for a LESS-trusted role (Manager) resetting
+//         someone else's password.
+// @route  POST /api/admin/users/:id/reset-password
+// @access Private (Admin only)
+// @body   { newPassword }
+const adminResetPassword = asyncHandler(async (req, res) => {
+  const { newPassword } = req.body;
+
+  if (req.params.id === String(req.user._id)) {
+    res.status(400);
+    throw new Error("Use the Profile page's Change Password to update your own password");
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  user.password = newPassword; // re-hashed automatically by the pre-save hook
+  await user.save();
+
+  await logActivity(req.user._id, `Reset the password for "${user.name}"`, 'user');
+
+  res.status(200).json({ success: true, message: `Password reset for ${user.name}` });
+});
+
+// PHASE 26: Manager -> Staff password reset, gated by an OTP emailed to
+// the STAFF MEMBER'S OWN registered email address (not the Manager's,
+// not an Admin's) - so the account owner is always the one who actually
+// sees the code, even though the Manager is the one initiating the reset
+// and typing in the new password. A Manager can only target Staff
+// accounts here, never another Manager or an Admin.
+
+// @desc   Step 1: generate an OTP and email it to the target Staff
+//         member's own registered email address.
+// @route  POST /api/admin/users/:id/staff-password-reset/request-otp
+// @access Private (Manager only)
+const requestStaffPasswordResetOtp = asyncHandler(async (req, res) => {
+  const targetUser = await User.findById(req.params.id);
+
+  if (!targetUser) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  if (targetUser.role !== 'staff') {
+    res.status(403);
+    throw new Error('You can only reset passwords for Staff accounts');
+  }
+
+  const otp = String(crypto.randomInt(100000, 1000000)); // 6-digit code
+  targetUser.staffResetOtpHash = crypto.createHash('sha256').update(otp).digest('hex');
+  targetUser.staffResetOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await targetUser.save();
+
+  await sendEmail(
+    targetUser.email,
+    'Password Reset Verification Code',
+    `Hi ${targetUser.name},\n\n${req.user.name} (Manager) has requested to reset your Inventory Manager account password.\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes. Share it with your Manager only if you approve this reset - if you did not expect this, please contact your Admin.`
+  );
+
+  await logActivity(
+    req.user._id,
+    `Requested a password reset OTP for staff member "${targetUser.name}"`,
+    'user'
+  );
+
+  res.status(200).json({
+    success: true,
+    message: `A verification code was emailed to ${targetUser.email}`,
+  });
+});
+
+// @desc   Step 2: verify the OTP (emailed to the Staff member) and set
+//         their new password.
+// @route  POST /api/admin/users/:id/staff-password-reset/confirm
+// @access Private (Manager only)
+// @body   { otp, newPassword }
+const resetStaffPasswordWithOtp = asyncHandler(async (req, res) => {
+  const { otp, newPassword } = req.body;
+
+  const targetUser = await User.findById(req.params.id).select(
+    '+staffResetOtpHash +staffResetOtpExpires'
+  );
+
+  if (!targetUser) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  if (targetUser.role !== 'staff') {
+    res.status(403);
+    throw new Error('You can only reset passwords for Staff accounts');
+  }
+
+  if (!targetUser.staffResetOtpHash || !targetUser.staffResetOtpExpires) {
+    res.status(400);
+    throw new Error('No password reset was requested for this user, or it already expired');
+  }
+  if (targetUser.staffResetOtpExpires < new Date()) {
+    res.status(400);
+    throw new Error('This verification code has expired - request a new one');
+  }
+
+  const providedHash = crypto.createHash('sha256').update(String(otp || '')).digest('hex');
+  if (providedHash !== targetUser.staffResetOtpHash) {
+    res.status(401);
+    throw new Error('Incorrect verification code');
+  }
+
+  targetUser.password = newPassword; // re-hashed automatically by the pre-save hook
+  targetUser.staffResetOtpHash = null;
+  targetUser.staffResetOtpExpires = null;
+  await targetUser.save();
+
+  await logActivity(req.user._id, `Reset the password for staff member "${targetUser.name}"`, 'user');
+  await createNotification(
+    'admin',
+    'password_reset',
+    `${req.user.name} (Manager) reset the password for staff member "${targetUser.name}"`,
+    '/admin/staff-passwords'
+  );
+
+  res.status(200).json({ success: true, message: `Password reset for ${targetUser.name}` });
+});
+
+// @desc   List Staff-only accounts (id/name/email) - a Manager needs
+//         this to pick who to reset a password for, but must NOT get the
+//         full Admin user list (which includes Admins/other Managers and
+//         role/status management). Kept intentionally minimal.
+// @route  GET /api/admin/staff-list
+// @access Private (Admin + Manager)
+const getStaffList = asyncHandler(async (req, res) => {
+  const staff = await User.find({ role: 'staff' }).select('name email isActive').sort({ name: 1 });
+  res.status(200).json({ success: true, staff });
 });
 
 // @desc   Stock report - breakdown by category, plus low/out-of-stock lists
@@ -284,6 +426,10 @@ module.exports = {
   createUser,
   updateUserStatus,
   updateUserRole,
+  adminResetPassword,
+  requestStaffPasswordResetOtp,
+  resetStaffPasswordWithOtp,
+  getStaffList,
   getStockReport,
   getSupplierReport,
 };

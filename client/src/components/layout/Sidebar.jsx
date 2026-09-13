@@ -96,6 +96,12 @@ function Sidebar({ activeAlertsCount = 0, open, onClose }) {
                   User Management
                 </SidebarLink>
               )}
+              {/* PHASE 26: visible to Admin + Manager - restricted to
+                  just Staff accounts + password reset, unlike the full
+                  User Management page above. */}
+              <SidebarLink to="/admin/staff-passwords" icon="🔑" onClick={onClose}>
+                Staff Passwords
+              </SidebarLink>
               <SidebarLink to="/admin/reports" icon="📄" onClick={onClose}>
                 Reports
               </SidebarLink>

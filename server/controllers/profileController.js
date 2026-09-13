@@ -123,4 +123,29 @@ const changePassword = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Password changed successfully' });
 });
 
-module.exports = { getProfile, updateProfile, uploadPhoto, changePassword };
+// @desc   Re-confirm the CURRENTLY LOGGED-IN user's own password, as a
+//         step-up check before a sensitive action (creating/editing a
+//         product, or bulk CSV import) actually goes through. This is
+//         deliberately the acting user's OWN login password - an Admin
+//         confirms with the Admin's password, a Manager confirms with
+//         the Manager's password - never a separate "admin override"
+//         credential, per the explicit requirement that only the person
+//         actually performing the action can authorize it.
+// @route  POST /api/profile/verify-password
+// @access Private
+// @body   { password }
+const verifyPassword = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+
+  const user = await User.findById(req.user._id).select('+password');
+  const isMatch = await user.matchPassword(password || '');
+
+  if (!isMatch) {
+    res.status(401);
+    throw new Error('Incorrect password');
+  }
+
+  res.status(200).json({ success: true });
+});
+
+module.exports = { getProfile, updateProfile, uploadPhoto, changePassword, verifyPassword };

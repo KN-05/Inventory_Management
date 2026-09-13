@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const asyncHandler = require('../utils/asyncHandler');
 const generateToken = require('../utils/generateToken');
 const logActivity = require('../utils/logActivity');
+const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
 
 // Shape the user object we send back to the frontend.
@@ -141,12 +142,16 @@ const getMe = asyncHandler(async (req, res) => {
 // @body   { email }
 //
 // PHASE 2: "Forgot password UI if backend support exists" - this IS the
-// backend support. Since this project has no email-sending service
-// configured (adding one would mean a new external dependency, which the
-// spec says to avoid unless required), the reset link is returned
-// directly in the API response for local/dev use instead of emailed.
-// A comment below marks exactly where you'd plug in a real email
-// provider (e.g. Nodemailer + SMTP, SendGrid, Resend) for production.
+// backend support.
+//
+// PHASE 27: now actually EMAILS the reset link (via utils/sendEmail.js -
+// Gmail SMTP, the same setup added for Phase 26's Staff password-reset
+// OTP), instead of the earlier "dev mode" placeholder that returned the
+// raw link straight in the API response. If sending the email fails for
+// any reason (e.g. EMAIL_USER/EMAIL_APP_PASSWORD not configured yet),
+// this still falls back to that same dev-mode response field so local
+// development/testing isn't blocked - the frontend only shows that
+// fallback block when it's actually present.
 //
 // SECURITY NOTE: we always respond with the same generic success message,
 // whether or not the email exists in the database - this prevents an
@@ -158,7 +163,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email: normalizedEmail });
 
-  let devResetUrl; // only populated (and only returned) when a user was found
+  let devResetUrl; // only set (and only returned) if the real email send fails
 
   if (user) {
     // Generate a random raw token, but only store its HASH in the
@@ -170,19 +175,26 @@ const forgotPassword = asyncHandler(async (req, res) => {
     user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     await user.save();
 
-    devResetUrl = `${process.env.CLIENT_URL}/reset-password/${rawToken}`;
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${rawToken}`;
 
-    // PRODUCTION TODO: send `devResetUrl` via a real email provider here
-    // instead of returning it in the response, e.g.:
-    //   await sendEmail(user.email, 'Reset your password', devResetUrl);
-    console.log(`[DEV] Password reset link for ${user.email}: ${devResetUrl}`);
+    try {
+      await sendEmail(
+        user.email,
+        'Reset Your Password',
+        `Hi ${user.name},\n\nWe received a request to reset your Inventory Manager password.\n\nClick the link below to choose a new password (valid for 30 minutes):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`
+      );
+    } catch (err) {
+      // Email isn't configured/working - fall back to dev mode instead of
+      // silently failing, so local development still works end to end.
+      console.error('[forgotPassword] Failed to send email, falling back to dev mode:', err.message);
+      devResetUrl = resetUrl;
+    }
   }
 
   res.status(200).json({
     success: true,
-    message: 'If an account with that email exists, a password reset link has been generated.',
-    // Only present in this dev-mode setup - a real deployment with email
-    // sending configured would remove this field from the response.
+    message: 'If an account with that email exists, a password reset link has been sent to it.',
+    // Only present when the real email send failed/isn't configured.
     devResetUrl,
   });
 });
@@ -220,6 +232,34 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc   Confirm the CURRENT logged-in user's login password
+// @route  POST /api/auth/verify-password
+// @access Private (any logged-in role)
+//
+// PHASE 24: used as a step-up confirmation before certain sensitive
+// actions (creating/editing/importing products) - the frontend calls
+// this with whatever the user just typed, and only proceeds with the
+// real action if it comes back { valid: true }. Reuses the SAME
+// bcrypt-hashed password and matchPassword() comparison already used at
+// login - this is not a separate PIN/secondary password, it's a
+// re-check of the one the user already logs in with.
+const verifyPassword = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+
+  // req.user (set by the `protect` middleware) doesn't include the
+  // password field (schema has `select: false` on it) - re-fetch this
+  // one user with the password included so matchPassword() has
+  // something to compare against.
+  const user = await User.findById(req.user._id).select('+password');
+
+  if (!password || !user || !(await user.matchPassword(password))) {
+    res.status(401);
+    throw new Error('Incorrect password');
+  }
+
+  res.status(200).json({ valid: true });
+});
+
 module.exports = {
   registerUser,
   loginUser,
@@ -227,4 +267,6 @@ module.exports = {
   getMe,
   forgotPassword,
   resetPassword,
+  verifyPassword,
 };
+

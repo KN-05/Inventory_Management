@@ -8,11 +8,19 @@
 // what would be created, and every row-level error before anything
 // happens. Only clicking "Confirm Import" re-sends the exact same File
 // object with `preview: false`, which actually inserts the valid rows.
+//
+// PHASE 25: "Confirm Import" no longer inserts immediately - it now opens
+// PasswordConfirmModal first (re-checking the current user's own login
+// password via POST /api/profile/verify-password), and the actual insert
+// only fires from handlePasswordVerified once that succeeds. The preview
+// step itself is unchanged - nothing is written to the database yet at
+// that point anyway, so it doesn't need the extra confirmation.
 
 import { useState } from 'react';
 import { importProductsCsv } from '../../api/products';
 import AnimatedModal from '../common/AnimatedModal';
 import Button from '../common/Button';
+import PasswordConfirmModal from '../common/PasswordConfirmModal';
 
 const TEMPLATE_CSV = `name,sku,category,supplier,quantity,price,lowStockThreshold
 Wireless Mouse,ELEC-101,Electronics,Acme Supplies Co.,50,19.99,10
@@ -35,6 +43,7 @@ function ImportCsvModal({ open, onClose, onImported }) {
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null); // preview response (nothing inserted yet)
   const [result, setResult] = useState(null); // final import response (rows actually inserted)
+  const [passwordOpen, setPasswordOpen] = useState(false); // PHASE 25
 
   const handleClose = () => {
     setFile(null);
@@ -61,7 +70,14 @@ function ImportCsvModal({ open, onClose, onImported }) {
     }
   };
 
-  const handleConfirm = async () => {
+  // PHASE 25: this button no longer imports directly - it just opens the
+  // password gate. The real insert happens in handlePasswordVerified.
+  const handleConfirmClick = () => {
+    setPasswordOpen(true);
+  };
+
+  const handlePasswordVerified = async () => {
+    setPasswordOpen(false);
     setError('');
     setUploading(true);
     try {
@@ -195,13 +211,24 @@ function ImportCsvModal({ open, onClose, onImported }) {
           <Button
             variant="primary"
             type="button"
-            onClick={handleConfirm}
+            onClick={handleConfirmClick}
             disabled={uploading || summary.validRows === 0}
           >
             {uploading ? 'Importing...' : `Confirm Import (${summary.validRows} row(s))`}
           </Button>
         )}
       </div>
+
+      {/* PHASE 25: password re-confirmation gate - only fires the real
+          insert (handlePasswordVerified) once the current user's own
+          password checks out. */}
+      <PasswordConfirmModal
+        open={passwordOpen}
+        title="Confirm password to import products"
+        message={`This will insert ${summary?.validRows || 0} product(s) into the database - please re-enter your login password to continue.`}
+        onVerified={handlePasswordVerified}
+        onCancel={() => setPasswordOpen(false)}
+      />
     </AnimatedModal>
   );
 }

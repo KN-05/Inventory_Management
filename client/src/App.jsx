@@ -22,6 +22,7 @@ import Customers from './pages/Customers';
 import Sales from './pages/Sales';
 import StockAlerts from './pages/StockAlerts';
 import UserManagement from './pages/admin/UserManagement';
+import StaffPasswords from './pages/admin/StaffPasswords';
 import Reports from './pages/admin/Reports';
 import Analytics from './pages/admin/Analytics';
 import ActivityLogs from './pages/admin/ActivityLogs';
@@ -94,6 +95,19 @@ function App() {
                 element={
                   <RoleRoute allowedRoles={['admin']}>
                     <UserManagement />
+                  </RoleRoute>
+                }
+              />
+
+              {/* PHASE 26: Admin + Manager - a restricted view that only
+                  lists Staff accounts and only offers "Reset Password"
+                  (OTP emailed to the Staff member's own email). Manager
+                  does NOT get the full /admin/users page above. */}
+              <Route
+                path="/admin/staff-passwords"
+                element={
+                  <RoleRoute allowedRoles={['admin', 'manager']}>
+                    <StaffPasswords />
                   </RoleRoute>
                 }
               />

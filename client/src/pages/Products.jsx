@@ -25,10 +25,17 @@ import ImportCsvModal from '../components/products/ImportCsvModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
+import PasswordConfirmModal from '../components/common/PasswordConfirmModal';
 
 function Products() {
   const { isAdmin, isManager } = useAuth();
-  const canDelete = isAdmin || isManager;
+  // PHASE 25: renamed from `canDelete` - this same Admin/Manager check is
+  // now also what gates the "+ Add Product" button and every row's
+  // "Edit" button below (previously those were shown to everyone,
+  // relying only on the backend to reject Staff - the backend check was
+  // always correct, this just makes the frontend match it so Staff don't
+  // see controls they can't actually use).
+  const canManage = isAdmin || isManager;
   const toast = useToast();
 
   const [products, setProducts] = useState([]);
@@ -55,6 +62,11 @@ function Products() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [importOpen, setImportOpen] = useState(false); // PHASE 13: CSV import modal
   const [viewingProduct, setViewingProduct] = useState(null); // PHASE 6: Product Details modal
+  // PHASE 25: holds the validated form data waiting on password
+  // confirmation - null when no add/edit is pending. The actual
+  // createProduct/updateProduct API call only fires from
+  // handlePasswordVerified below, never directly from the form's submit.
+  const [pendingFormData, setPendingFormData] = useState(null);
 
   const loadLookups = useCallback(async () => {
     const [cats, sups] = await Promise.all([getCategoryOptions(), getSupplierOptions()]);
@@ -102,7 +114,20 @@ function Products() {
   };
 
   const handleFormSubmit = async (formData) => {
+    // PHASE 25: this used to call createProduct/updateProduct directly.
+    // Now it just stashes the already-validated form data and opens the
+    // password confirmation modal - the actual API call moved to
+    // handlePasswordVerified() below, which only runs once the user's
+    // own password has been checked against the backend.
     setFormError('');
+    setPendingFormData(formData);
+  };
+
+  // Fires only after PasswordConfirmModal has successfully verified the
+  // current user's password (see api/profile.js's verifyPassword).
+  const handlePasswordVerified = async () => {
+    const formData = pendingFormData;
+    setPendingFormData(null);
     try {
       if (editingProduct) {
         await updateProduct(editingProduct._id, formData);
@@ -183,14 +208,19 @@ function Products() {
           <Button variant="secondary" onClick={handleExport}>
             Export CSV
           </Button>
-          {canDelete && (
+          {/* PHASE 25: Import CSV was already Admin/Manager-only here.
+              "+ Add Product" now matches it - previously shown to every
+              role, even though the backend has always rejected Staff. */}
+          {canManage && (
             <Button variant="secondary" onClick={() => setImportOpen(true)}>
               Import CSV
             </Button>
           )}
-          <Button variant="primary" onClick={openAddForm}>
-            + Add Product
-          </Button>
+          {canManage && (
+            <Button variant="primary" onClick={openAddForm}>
+              + Add Product
+            </Button>
+          )}
         </div>
       </div>
 
@@ -214,7 +244,7 @@ function Products() {
       ) : (
         <ProductTable
           products={products}
-          isAdmin={canDelete}
+          canManage={canManage}
           onEdit={openEditForm}
           onDelete={confirmDelete}
           onAdjustStock={handleAdjustStock}
@@ -231,6 +261,18 @@ function Products() {
         onCancel={() => setFormOpen(false)}
         onUploadImage={handleUploadImage}
         error={formError}
+      />
+
+      {/* PHASE 25: password re-confirmation gate for add/edit - opens
+          right after ProductForm's own validation passes, and only on
+          success does handlePasswordVerified actually call the
+          create/update API above. */}
+      <PasswordConfirmModal
+        open={!!pendingFormData}
+        title={editingProduct ? 'Confirm password to save changes' : 'Confirm password to add product'}
+        message="Product data is sensitive - please re-enter your login password to continue."
+        onVerified={handlePasswordVerified}
+        onCancel={() => setPendingFormData(null)}
       />
 
       <ProductDetailsModal

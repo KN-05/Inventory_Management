@@ -13,6 +13,10 @@ const {
   createUser,
   updateUserStatus,
   updateUserRole,
+  adminResetPassword,
+  requestStaffPasswordResetOtp,
+  resetStaffPasswordWithOtp,
+  getStaffList,
   getStockReport,
   getSupplierReport,
 } = require('../controllers/adminController');
@@ -64,6 +68,36 @@ router.patch(
       .withMessage("Role must be 'admin', 'manager', or 'staff'"),
   ]),
   updateUserRole
+);
+
+// @route  POST /api/admin/users/:id/reset-password
+// Admin directly resets any other user's password - no OTP, since the
+// Admin performing this is already fully authenticated.
+router.post(
+  '/users/:id/reset-password',
+  authorize('admin'),
+  runValidation([
+    body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  ]),
+  adminResetPassword
+);
+
+// --- PHASE 26: Manager -> Staff password reset (OTP emailed to the
+// Staff member's own registered email address) ---
+router.get('/staff-list', authorize('admin', 'manager'), getStaffList);
+router.post(
+  '/users/:id/staff-password-reset/request-otp',
+  authorize('manager'),
+  requestStaffPasswordResetOtp
+);
+router.post(
+  '/users/:id/staff-password-reset/confirm',
+  authorize('manager'),
+  runValidation([
+    body('otp').notEmpty().withMessage('Verification code is required'),
+    body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  ]),
+  resetStaffPasswordWithOtp
 );
 
 // --- Reports: Admin + Manager ---
