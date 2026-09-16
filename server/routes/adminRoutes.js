@@ -27,6 +27,12 @@ const {
   getPurchaseAnalytics,
   getProfitAnalytics,
 } = require('../controllers/analyticsController');
+const {
+  getReorderSuggestions,
+  getDemandForecast,
+  getAnomalies,
+  getAssistantAnswer,
+} = require('../controllers/aiController');
 
 const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
@@ -113,6 +119,14 @@ router.get('/reports/suppliers', authorize('admin', 'manager'), getSupplierRepor
 router.get('/analytics/sales', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getSalesAnalytics);
 router.get('/analytics/purchases', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getPurchaseAnalytics);
 router.get('/analytics/profit', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getProfitAnalytics);
+
+// PHASE 28: "AI Insights" - data-driven (statistics, not a paid AI API)
+// reorder suggestions / demand forecast / anomaly detection. Same
+// ANALYTICS_VIEW permission as the analytics routes above (Admin + Manager).
+router.get('/ai/reorder-suggestions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getReorderSuggestions);
+router.get('/ai/demand-forecast', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getDemandForecast);
+router.get('/ai/anomalies', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getAnomalies);
+router.post('/ai/assistant', requirePermission(PERMISSIONS.ANALYTICS_VIEW), getAssistantAnswer);
 
 // --- Activity Logs: Admin only (full log access, per the spec) ---
 router.get('/activity-logs', authorize('admin'), getActivityLogs);

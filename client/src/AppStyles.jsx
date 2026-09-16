@@ -2534,6 +2534,25 @@ button:disabled {
   color: var(--color-text);
 }
 
+/* PHASE 29: suggested-question chips on the AI Assistant tab - a light
+   card background version of a "pill" button (the landing page's
+   .landing-pill is white-text-on-purple and would be invisible here). */
+.ai-suggested-chip {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.ai-suggested-chip:hover {
+  border-color: var(--color-primary);
+}
+
 .filters-bar select {
   padding: 0.5rem 0.65rem;
   border: none;

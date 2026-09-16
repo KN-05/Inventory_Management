@@ -46,3 +46,16 @@ export const getPurchaseAnalytics = () =>
 
 export const getProfitAnalytics = () =>
   axiosInstance.get('/admin/analytics/profit').then((res) => res.data.analytics);
+
+// PHASE 28: "AI Insights" - data-driven (statistics-based, no paid AI
+// API) reorder suggestions, demand forecast, and anomaly detection. See
+// server/controllers/aiController.js for how each is actually computed.
+export const getReorderSuggestions = () =>
+  axiosInstance.get('/admin/ai/reorder-suggestions').then((res) => res.data);
+
+export const getDemandForecast = () => axiosInstance.get('/admin/ai/demand-forecast').then((res) => res.data);
+
+export const getAnomalies = () => axiosInstance.get('/admin/ai/anomalies').then((res) => res.data);
+
+export const askAiAssistant = (question) =>
+  axiosInstance.post('/admin/ai/assistant', { question }).then((res) => res.data);
