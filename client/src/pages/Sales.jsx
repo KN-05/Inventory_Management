@@ -9,14 +9,25 @@
 // Available to Admin, Manager, AND Staff (per the spec's Staff Allowed
 // list: "Sales", "Basic billing", "Barcode scanning") - only the Cancel
 // action in history is hidden for Staff (no SALES_CANCEL permission).
+//
+// PHASE 31: added a "📷 Scan" button next to the search box that opens
+// BarcodeScannerModal - lets anyone add a product via their device's
+// camera when no dedicated USB/Bluetooth barcode scanner is connected.
+//
+// PHASE 32: scanning is now continuous (the camera modal stays open
+// after each scan, so several products can be added back-to-back), with
+// a louder success beep, a distinct error buzz when a scanned code
+// doesn't match any product, and a short cooldown per code so holding a
+// barcode in view doesn't add it to the cart dozens of times per second.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
 import { getProductOptions } from '../api/lookups';
 import { getCustomers, createCustomer } from '../api/customers';
 import { getSales, createSale, cancelSale, exportSalesCsv } from '../api/sales';
 import { downloadBlob } from '../utils/downloadBlob';
+import { playSuccessBeep, playErrorBeep } from '../utils/scanSounds';
 
 import CustomerForm from '../components/customers/CustomerForm';
 import InvoiceView from '../components/sales/InvoiceView';
@@ -24,7 +35,13 @@ import SalesHistoryTable from '../components/sales/SalesHistoryTable';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
+import BarcodeScannerModal from '../components/common/BarcodeScannerModal';
 import { formatCurrency } from '../utils/formatCurrency';
+
+// PHASE 32: ignore the same scanned code if it comes in again within
+// this window - prevents one barcode held in front of the camera from
+// being added to the cart repeatedly while the frame keeps re-decoding it.
+const SCAN_COOLDOWN_MS = 1500;
 
 function Sales() {
   const { isAdmin, isManager } = useAuth();
@@ -33,12 +50,10 @@ function Sales() {
 
   const [tab, setTab] = useState('new'); // 'new' | 'history'
 
-  // Lookup data for the cart
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
 
-  // Cart / checkout state
-  const [cart, setCart] = useState([]); // [{ product, quantity, sellingPrice }]
+  const [cart, setCart] = useState([]);
   const [productQuery, setProductQuery] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -49,9 +64,10 @@ function Sales() {
   const [checkoutError, setCheckoutError] = useState('');
   const [checkingOut, setCheckingOut] = useState(false);
   const [customerFormOpen, setCustomerFormOpen] = useState(false);
-  const [completedSale, setCompletedSale] = useState(null); // shows InvoiceView right after checkout
+  const [completedSale, setCompletedSale] = useState(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const lastScanRef = useRef({ code: '', time: 0 });
 
-  // History
   const [sales, setSales] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState('');
@@ -86,7 +102,6 @@ function Sales() {
     if (tab === 'history') loadHistory();
   }, [tab, loadHistory]);
 
-  // Filters the product dropdown by name/SKU/barcode as the person types.
   const filteredProducts = productQuery
     ? products.filter(
         (p) =>
@@ -115,8 +130,6 @@ function Sales() {
     setSelectedProductId('');
   };
 
-  // PHASE 8 "barcode scanning": typing/scanning an exact SKU or barcode
-  // and pressing Enter adds it straight to the cart - no dropdown needed.
   const handleSearchKeyDown = (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -128,6 +141,33 @@ function Sales() {
     if (match) {
       addToCart(match);
       setProductQuery('');
+    }
+  };
+
+  // PHASE 32: shared by the camera scanner modal. Debounces repeat scans
+  // of the same code, plays a louder success beep on match / a distinct
+  // error buzz on no-match, and keeps the camera modal OPEN so more
+  // products can be scanned right after - it no longer auto-closes.
+  const handleCameraScan = (code) => {
+    const query = (code || '').trim().toLowerCase();
+    if (!query) return;
+
+    const now = Date.now();
+    if (lastScanRef.current.code === query && now - lastScanRef.current.time < SCAN_COOLDOWN_MS) {
+      return;
+    }
+    lastScanRef.current = { code: query, time: now };
+
+    const match = products.find(
+      (p) => p.sku?.toLowerCase() === query || p.barcode?.toLowerCase() === query
+    );
+    if (match) {
+      addToCart(match);
+      playSuccessBeep();
+      toast.success(`Added "${match.name}" to cart`);
+    } else {
+      playErrorBeep();
+      toast.error(`No product found for scanned code "${code}"`);
     }
   };
 
@@ -175,7 +215,7 @@ function Sales() {
       toast.success(`Sale ${data.sale.invoiceNumber} completed`);
       setCompletedSale(data.sale);
       resetCart();
-      loadLookups(); // refresh product stock + customer totals
+      loadLookups();
     } catch (err) {
       setCheckoutError(err.response?.data?.message || 'Checkout failed. Please try again.');
     } finally {
@@ -203,7 +243,6 @@ function Sales() {
     }
   };
 
-  // PHASE 9: everyone who can view sales can export them (Staff included).
   const handleExport = async () => {
     try {
       const blob = await exportSalesCsv();
@@ -219,8 +258,6 @@ function Sales() {
         <h1>Sales / Billing</h1>
       </div>
 
-      {/* PHASE 20: proper segmented tab control (was two full Buttons side
-          by side) - same setTab('new'|'history') calls, purely visual. */}
       <div className="pos-tabs">
         <button
           type="button"
@@ -268,6 +305,9 @@ function Sales() {
               </div>
               <Button variant="secondary" type="button" onClick={handleAddSelected} disabled={!selectedProductId}>
                 + Add to Cart
+              </Button>
+              <Button variant="secondary" type="button" onClick={() => setScannerOpen(true)}>
+                📷 Scan
               </Button>
             </div>
           </div>
@@ -375,10 +415,6 @@ function Sales() {
               </div>
             </div>
 
-            {/* PHASE 20: receipt-style breakdown instead of a single bare
-                "Total: X" line - every figure here was already being
-                computed above (itemsTotal/discount/tax/grandTotal), just
-                not all shown individually before. */}
             <div className="pos-summary">
               <div className="pos-summary-row">
                 <span>Subtotal</span>
@@ -455,6 +491,12 @@ function Sales() {
 
       <InvoiceView open={!!completedSale} sale={completedSale} onClose={() => setCompletedSale(null)} />
       <InvoiceView open={!!viewingSale} sale={viewingSale} onClose={() => setViewingSale(null)} />
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onScan={handleCameraScan}
+        onClose={() => setScannerOpen(false)}
+      />
 
       <ConfirmDialog
         open={!!cancelTarget}
