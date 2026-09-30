@@ -40,51 +40,61 @@ const CSS = `
      warehouse record - SKUs, quantities, prices, stat numbers. */
 
 :root {
-  /* Color */
-  --color-bg: #eef1f5;
-  --color-surface: #eef1f5;
-  --color-border: #dde1e8;
-  --color-text: #1e2433;
+  /* Color - PHASE: modern SaaS palette. A light slate page canvas with
+     pure-white raised surfaces (cards/tables/sidebar-navbar), a single
+     professional indigo accent used everywhere (no more per-role hue
+     swap - see the .app-shell[data-theme] blocks below, which now only
+     vary the sidebar's active-link accent bar as a subtle role cue). */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
   --color-text-secondary: #64748b;
   --color-text-muted: #94a3b8;
 
-  --color-primary: #7c3aed;
-  --color-primary-hover: #6d28d9;
-  --color-primary-bg: #f3ebfe;
-  --color-primary-gradient: linear-gradient(90deg, #7c3aed, #a855f7);
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-bg: #eef2ff;
+  --color-primary-gradient: linear-gradient(90deg, #4f46e5, #6366f1);
 
-  --color-success: #0d9488;
-  --color-success-bg: #eef1f5;
-  --color-success-border: #99f6e4;
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
 
-  --color-warning: #c2410c;
-  --color-warning-bg: #eef1f5;
-  --color-warning-border: #fed7aa;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
 
-  --color-danger: #be123c;
-  --color-danger-bg: #eef1f5;
-  --color-danger-border: #fecdd3;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
 
-  --sidebar-gradient: linear-gradient(180deg, #4c1d95, #1e1b4b);
-  --sidebar-bg-active: rgba(255, 255, 255, 0.15);
-  --sidebar-text: #c4b5fd;
+  --sidebar-gradient: #0f172a;
+  --sidebar-bg-active: rgba(255, 255, 255, 0.08);
+  --sidebar-text: #94a3b8;
   --sidebar-text-active: #ffffff;
-  --sidebar-section-label: #a78bfa;
-  --sidebar-accent: #ffffff;
+  --sidebar-section-label: #64748b;
+  --sidebar-accent: #818cf8;
 
-  /* Neumorphic shadow pair - dark stop first (bottom-right), light stop
-     second (top-left). Both stops are derived from --color-bg so the
-     effect works whatever the page background is. */
-  --neu-shadow: 3px 3px 6px #cbd2dd, -3px -3px 6px #ffffff;
-  --neu-shadow-inset: inset 1px 1px 2px #cbd2dd, inset -1px -1px 2px #ffffff;
-  --neu-shadow-lg: 6px 6px 14px #c6cdd9, -6px -6px 14px #ffffff;
+  /* PHASE: kept the same variable names every card/table/button/input in
+     the app already references (--neu-shadow*), but redefined their
+     VALUES from a soft embossed/neumorphic dual-shadow to a clean,
+     modern bordered-card treatment: a crisp 1px border ring plus a very
+     soft drop shadow. This single change is what makes every existing
+     .chart-card / .stat-card / .data-table / .modal-box / badge/ chip
+     etc. across the whole app look like flat, professional SaaS
+     surfaces instead of "raised" neumorphic ones - with no changes
+     needed to any of those individual component rules or JSX. */
+  --neu-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --neu-shadow-inset: inset 0 0 0 1px var(--color-border);
+  --neu-shadow-lg: 0 0 0 1px var(--color-border), 0 12px 28px rgba(15, 23, 42, 0.1);
 
   /* Type */
   --font-ui: 'Inter', system-ui, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
 
   /* Layout */
-  --radius: 10px;
+  --radius: 12px;
   --radius-sm: 8px;
   --sidebar-width: 240px;
   --navbar-height: 60px;
@@ -137,37 +147,22 @@ const CSS = `
    defined now and will apply automatically the moment that role exists,
    with zero extra frontend work needed. */
 
-/* Admin - purple → navy gradient: authority, control, system management */
+/* PHASE: all three roles now share the exact same professional
+   indigo-on-dark-navy palette (inherited from :root above) - only the
+   active nav link's accent bar changes per role, as a subtle wayfinding
+   cue. Role is still clearly shown via the text badge next to the
+   user's name (.navbar-user-role / .sidebar-user-role), not by
+   recoloring the whole app. */
 .app-shell[data-theme='admin'] {
-  --color-primary: #7c3aed;
-  --color-primary-hover: #6d28d9;
-  --color-primary-bg: #f3ebfe;
-  --color-primary-gradient: linear-gradient(90deg, #7c3aed, #a855f7);
-  --sidebar-gradient: linear-gradient(180deg, #4c1d95, #1e1b4b);
-  --sidebar-text: #c4b5fd;
-  --sidebar-section-label: #a78bfa;
+  --sidebar-accent: #818cf8; /* indigo */
 }
 
-/* Manager/Accountant - teal → blue gradient: finance, operations, inventory */
 .app-shell[data-theme='manager'] {
-  --color-primary: #0d9488;
-  --color-primary-hover: #0f766e;
-  --color-primary-bg: #e6fbf8;
-  --color-primary-gradient: linear-gradient(90deg, #0d9488, #0ea5e9);
-  --sidebar-gradient: linear-gradient(180deg, #0d9488, #0c4a6e);
-  --sidebar-text: #99f6e4;
-  --sidebar-section-label: #5eead4;
+  --sidebar-accent: #2dd4bf; /* teal */
 }
 
-/* Staff - amber → brown gradient: daily operations, sales, quick actions */
 .app-shell[data-theme='staff'] {
-  --color-primary: #d97706;
-  --color-primary-hover: #b45309;
-  --color-primary-bg: #fef3e2;
-  --color-primary-gradient: linear-gradient(90deg, #d97706, #f59e0b);
-  --sidebar-gradient: linear-gradient(180deg, #92400e, #451a03);
-  --sidebar-text: #fed7aa;
-  --sidebar-section-label: #fdba74;
+  --sidebar-accent: #fbbf24; /* amber */
 }
 
 * {
@@ -1933,7 +1928,7 @@ a:focus-visible {
 }
 
 .notif-bell-btn {
-  background: var(--color-bg);
+  background: var(--color-surface);
   box-shadow: var(--neu-shadow);
   border: none;
   border-radius: 50%;
@@ -2288,9 +2283,13 @@ a:focus-visible {
 }
 
 .btn-secondary {
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-text);
   box-shadow: var(--neu-shadow);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-bg);
 }
 
 .btn-danger {
