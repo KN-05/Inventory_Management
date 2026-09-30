@@ -40,11 +40,9 @@ const CSS = `
      warehouse record - SKUs, quantities, prices, stat numbers. */
 
 :root {
-  /* Color - PHASE: modern SaaS palette. A light slate page canvas with
+  /* Color - modern SaaS palette. A light slate page canvas with
      pure-white raised surfaces (cards/tables/sidebar-navbar), a single
-     professional indigo accent used everywhere (no more per-role hue
-     swap - see the .app-shell[data-theme] blocks below, which now only
-     vary the sidebar's active-link accent bar as a subtle role cue). */
+     professional indigo accent used everywhere. */
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
@@ -76,15 +74,9 @@ const CSS = `
   --sidebar-section-label: #64748b;
   --sidebar-accent: #818cf8;
 
-  /* PHASE: kept the same variable names every card/table/button/input in
-     the app already references (--neu-shadow*), but redefined their
-     VALUES from a soft embossed/neumorphic dual-shadow to a clean,
-     modern bordered-card treatment: a crisp 1px border ring plus a very
-     soft drop shadow. This single change is what makes every existing
-     .chart-card / .stat-card / .data-table / .modal-box / badge/ chip
-     etc. across the whole app look like flat, professional SaaS
-     surfaces instead of "raised" neumorphic ones - with no changes
-     needed to any of those individual component rules or JSX. */
+  /* Kept the same variable names every card/table/button/input already
+     references - redefined to a clean bordered-card treatment instead
+     of a neumorphic dual shadow. */
   --neu-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(15, 23, 42, 0.04);
   --neu-shadow-inset: inset 0 0 0 1px var(--color-border);
   --neu-shadow-lg: 0 0 0 1px var(--color-border), 0 12px 28px rgba(15, 23, 42, 0.1);
@@ -147,22 +139,18 @@ const CSS = `
    defined now and will apply automatically the moment that role exists,
    with zero extra frontend work needed. */
 
-/* PHASE: all three roles now share the exact same professional
-   indigo-on-dark-navy palette (inherited from :root above) - only the
-   active nav link's accent bar changes per role, as a subtle wayfinding
-   cue. Role is still clearly shown via the text badge next to the
-   user's name (.navbar-user-role / .sidebar-user-role), not by
-   recoloring the whole app. */
+/* All three roles share the same professional indigo-on-navy palette -
+   only the active nav link's accent bar changes per role. */
 .app-shell[data-theme='admin'] {
-  --sidebar-accent: #818cf8; /* indigo */
+  --sidebar-accent: #818cf8;
 }
 
 .app-shell[data-theme='manager'] {
-  --sidebar-accent: #2dd4bf; /* teal */
+  --sidebar-accent: #2dd4bf;
 }
 
 .app-shell[data-theme='staff'] {
-  --sidebar-accent: #fbbf24; /* amber */
+  --sidebar-accent: #fbbf24;
 }
 
 * {
@@ -518,9 +506,9 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: #f5f3ff;
-  background-image: radial-gradient(circle at 12% 8%, #ede9fe 0%, transparent 45%),
-    radial-gradient(circle at 88% 92%, #ede9fe 0%, transparent 45%);
+  background: #f8fafc;
+  background-image: radial-gradient(circle at 12% 8%, #e0e7ff 0%, transparent 45%),
+    radial-gradient(circle at 88% 92%, #e0e7ff 0%, transparent 45%);
 }
 
 .login-shell {
@@ -531,7 +519,7 @@ a:focus-visible {
   background: #ffffff;
   border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 30px 60px -20px rgba(76, 29, 149, 0.18), 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 30px 60px -20px rgba(49, 46, 129, 0.16), 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .login-form-side {
@@ -564,8 +552,8 @@ a:focus-visible {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.35);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
 }
 
 .login-brand-text {
@@ -630,9 +618,9 @@ a:focus-visible {
 
 .login-input:focus {
   outline: none;
-  border-color: #7c3aed;
+  border-color: #4f46e5;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
 }
 
 .login-password-wrap {
@@ -664,8 +652,8 @@ a:focus-visible {
 }
 
 .login-password-toggle:hover {
-  color: #7c3aed;
-  background: #f3ebfe;
+  color: #4f46e5;
+  background: #eef2ff;
 }
 
 .login-options-row {
@@ -688,12 +676,12 @@ a:focus-visible {
 .login-checkbox input {
   width: 15px;
   height: 15px;
-  accent-color: #7c3aed;
+  accent-color: #4f46e5;
   cursor: pointer;
 }
 
 .login-forgot-link {
-  color: #7c3aed;
+  color: #4f46e5;
   font-weight: 600;
   text-decoration: none;
 }
@@ -706,17 +694,17 @@ a:focus-visible {
   padding: 0.8rem;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(90deg, #7c3aed, #a855f7);
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
   color: #fff;
   font-size: 0.98rem;
   font-weight: 600;
-  box-shadow: 0 10px 20px -6px rgba(124, 58, 237, 0.45);
+  box-shadow: 0 10px 20px -6px rgba(79, 70, 229, 0.45);
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .login-submit-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px -6px rgba(124, 58, 237, 0.55);
+  box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.55);
 }
 
 .login-submit-btn:active:not(:disabled) {
@@ -736,7 +724,7 @@ a:focus-visible {
 }
 
 .login-footer a {
-  color: #7c3aed;
+  color: #4f46e5;
   font-weight: 600;
   text-decoration: none;
 }
@@ -750,7 +738,7 @@ a:focus-visible {
 .login-illustration-side {
   flex: 1 1 50%;
   position: relative;
-  background: linear-gradient(160deg, #6d28d9 0%, #4c1d95 100%);
+  background: linear-gradient(160deg, #4f46e5 0%, #1e1b4b 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -758,6 +746,34 @@ a:focus-visible {
   gap: 1.75rem;
   padding: 2.5rem;
   overflow: hidden;
+}
+
+/* Soft decorative glow blobs, purely visual - echo the landing page's
+   auth-floating-shape treatment so the login page feels part of the
+   same brand, not a one-off design. */
+.login-illustration-side::before,
+.login-illustration-side::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.login-illustration-side::before {
+  width: 220px;
+  height: 220px;
+  background: rgba(129, 140, 248, 0.35);
+  top: -60px;
+  right: -60px;
+}
+
+.login-illustration-side::after {
+  width: 180px;
+  height: 180px;
+  background: rgba(99, 102, 241, 0.3);
+  bottom: -50px;
+  left: -50px;
 }
 
 /* Clean, no-fake-data brand panel: an icon badge, headline copy, and a
@@ -772,11 +788,16 @@ a:focus-visible {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.05), 0 12px 30px rgba(15, 23, 42, 0.25);
+  position: relative;
+  z-index: 1;
 }
 
 .login-illustration-caption {
   text-align: center;
   max-width: 320px;
+  position: relative;
+  z-index: 1;
 }
 
 .login-pill-row {
@@ -786,6 +807,8 @@ a:focus-visible {
   justify-content: center;
   gap: 0.5rem;
   max-width: 320px;
+  position: relative;
+  z-index: 1;
 }
 
 .login-pill {
@@ -796,6 +819,7 @@ a:focus-visible {
   border: 1px solid rgba(255, 255, 255, 0.22);
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
+  backdrop-filter: blur(6px);
 }
 
 .login-illustration-title {
