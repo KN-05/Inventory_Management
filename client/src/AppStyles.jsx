@@ -1680,6 +1680,7 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   margin-left: var(--sidebar-width);
+  transition: margin-left var(--dur-base) var(--ease-out);
 }
 
 .app-content {
@@ -1698,7 +1699,9 @@ a:focus-visible {
   flex-direction: column;
   padding: 1rem 0.75rem;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 40;
+  transition: width var(--dur-base) var(--ease-out);
 }
 
 .sidebar-brand {
@@ -1780,6 +1783,87 @@ a:focus-visible {
   justify-content: center;
   font-size: 0.9rem;
   flex-shrink: 0;
+}
+
+.sidebar-link-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* PHASE: desktop-collapsible sidebar - a small floating handle sitting
+   on the sidebar's right edge (half in/half out), matching the classic
+   Notion/Linear-style collapse affordance. Desktop only - mobile uses
+   the hamburger + slide-over drawer instead (see .navbar-menu-btn). */
+.sidebar-collapse-toggle {
+  position: absolute;
+  top: 22px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--neu-shadow);
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 41;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.sidebar-collapse-toggle:hover {
+  color: var(--color-primary);
+}
+
+@media (max-width: 900px) {
+  .sidebar-collapse-toggle {
+    display: none;
+  }
+}
+
+@media (min-width: 901px) {
+  .app-shell.sidebar-collapsed .app-main {
+    margin-left: 72px;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar {
+    width: 72px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-brand-text,
+  .app-shell.sidebar-collapsed .sidebar-section-label,
+  .app-shell.sidebar-collapsed .sidebar-link-text,
+  .app-shell.sidebar-collapsed .sidebar-user-info,
+  .app-shell.sidebar-collapsed .nav-badge {
+    display: none;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-user-card {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-logout-btn {
+    display: none;
+  }
 }
 
 /* PHASE 18: bottom user card - sits at the end of the sidebar (the
@@ -1944,6 +2028,116 @@ a:focus-visible {
   background: var(--color-primary-bg);
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
+}
+
+/* PHASE: navbar profile dropdown - click the avatar to open name/role +
+   a Profile link + Logout, instead of a bare always-visible Logout
+   button. Reuses the exact same container/positioning pattern as
+   .notif-bell-container/.notif-dropdown for visual + interaction
+   consistency with the bell. */
+.navbar-profile-container {
+  position: relative;
+}
+
+.navbar-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+  border-radius: 999px;
+  transition: background var(--dur-fast) ease;
+}
+
+.navbar-profile-btn:hover {
+  background: var(--color-bg);
+}
+
+.navbar-profile-name-wrap {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.navbar-profile-chevron {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  margin-left: 0.1rem;
+}
+
+@media (min-width: 640px) {
+  .navbar-profile-name-wrap {
+    display: flex;
+  }
+}
+
+.navbar-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 220px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow-lg);
+  overflow: hidden;
+  z-index: 40;
+}
+
+.navbar-profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.navbar-profile-dropdown-name {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-profile-dropdown-role {
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+
+.navbar-profile-dropdown-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.navbar-profile-dropdown-link:hover {
+  background: var(--color-bg);
+}
+
+.navbar-profile-dropdown-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--color-danger);
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.navbar-profile-dropdown-logout:hover {
+  background: var(--color-danger-bg);
 }
 
 /* --- Notification bell (PHASE 3) --- */
