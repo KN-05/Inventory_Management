@@ -173,11 +173,28 @@ function Dashboard() {
             Here's what's happening with your inventory today. ({roleLabel(user?.role)})
           </p>
         </div>
-        {isManager && (
-          <Link to="/admin/reports" className="btn-secondary" style={{ textDecoration: 'none' }}>
-            View Reports
+
+        {/* PHASE 5: quick-action shortcuts to the pages people reach for
+            right after checking their stats - pure navigation, no new
+            data or modals wired up here. */}
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <Link to="/products" className="btn-secondary" style={{ textDecoration: 'none' }}>
+            + Add Product
           </Link>
-        )}
+          <Link to="/sales" className="btn-secondary" style={{ textDecoration: 'none' }}>
+            🛒 New Sale
+          </Link>
+          {(isAdmin || isManager) && (
+            <Link to="/purchases" className="btn-secondary" style={{ textDecoration: 'none' }}>
+              🧾 New Purchase
+            </Link>
+          )}
+          {isManager && (
+            <Link to="/admin/reports" className="btn-primary" style={{ textDecoration: 'none' }}>
+              View Reports
+            </Link>
+          )}
+        </div>
       </div>
 
       {error && <p className="banner banner-error">{error}</p>}
