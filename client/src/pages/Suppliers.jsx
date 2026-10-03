@@ -17,6 +17,7 @@ import SupplierForm from '../components/suppliers/SupplierForm';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
+import PageHeader from '../components/common/PageHeader';
 
 function Suppliers() {
   const { isAdmin, isManager } = useAuth();
@@ -106,19 +107,22 @@ function Suppliers() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Suppliers</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button variant="secondary" onClick={handleExport}>
-            Export CSV
-          </Button>
-          {canManage && (
-            <Button variant="primary" onClick={openAddForm}>
-              + Add Supplier
+      <PageHeader
+        title="Suppliers"
+        subtitle="Manage the vendors you purchase stock from"
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleExport}>
+              Export CSV
             </Button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <Button variant="primary" onClick={openAddForm}>
+                + Add Supplier
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
