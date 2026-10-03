@@ -14,6 +14,7 @@ import CustomerForm from '../components/customers/CustomerForm';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
+import PageHeader from '../components/common/PageHeader';
 
 function Customers() {
   const { isAdmin, isManager } = useAuth();
@@ -100,17 +101,20 @@ function Customers() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Customers</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button variant="secondary" onClick={handleExport}>
-            Export CSV
-          </Button>
-          <Button variant="primary" onClick={openAddForm}>
-            + Add Customer
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Customers"
+        subtitle="People who've bought from you, with their purchase history"
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleExport}>
+              Export CSV
+            </Button>
+            <Button variant="primary" onClick={openAddForm}>
+              + Add Customer
+            </Button>
+          </>
+        }
+      />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
