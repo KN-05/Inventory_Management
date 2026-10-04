@@ -24,6 +24,7 @@ import PurchaseDetailsModal from '../components/purchases/PurchaseDetailsModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
+import PageHeader from '../components/common/PageHeader';
 
 function Purchases() {
   const { isAdmin, isManager } = useAuth();
@@ -157,19 +158,22 @@ function Purchases() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Purchases</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button variant="secondary" onClick={handleExport}>
-            Export CSV
-          </Button>
-          {canManage && (
-            <Button variant="primary" onClick={openAddForm}>
-              + New Purchase Order
+      <PageHeader
+        title="Purchases"
+        subtitle="Purchase orders placed with your suppliers"
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleExport}>
+              Export CSV
             </Button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <Button variant="primary" onClick={openAddForm}>
+                + New Purchase Order
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
