@@ -214,13 +214,74 @@ function Login() {
 
         {/* ---------------- Right: brand visual (no numbers/data shown) ---------------- */}
         <div className="login-illustration-side">
+          {/* PHASE 4 polish: reuses the landing page's own dashboard-mockup
+              markup/classes (compact variant) instead of a plain icon
+              badge, so the login panel feels as rich/finished as the
+              marketing page. Single entrance only - no continuous
+              breathing/floating motion, matching this page's calmer
+              animation philosophy. */}
           <motion.div
-            className="login-badge"
-            initial={{ opacity: 0, scale: 0.9 }}
+            className="landing-mockup-frame landing-mockup-frame--compact"
+            initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           >
-            <BoxIcon size={40} />
+            <div className="landing-mockup-topbar">
+              <span className="landing-mockup-dot" style={{ background: '#f87171' }} />
+              <span className="landing-mockup-dot" style={{ background: '#fbbf24' }} />
+              <span className="landing-mockup-dot" style={{ background: '#4ade80' }} />
+              <span className="landing-mockup-url">Inventory Manager</span>
+            </div>
+            <div className="landing-mockup-body">
+              <div className="landing-mockup-sidebar">
+                <span className="landing-mockup-sidebar-brand">IM</span>
+                <span className="landing-mockup-sidebar-link landing-mockup-sidebar-link-active" />
+                <span className="landing-mockup-sidebar-link" />
+                <span className="landing-mockup-sidebar-link" />
+                <span className="landing-mockup-sidebar-link" />
+              </div>
+              <div className="landing-mockup-content">
+                <span className="landing-mockup-title-bar" />
+                <div className="landing-mockup-stat-grid">
+                  <div className="landing-mockup-stat">
+                    <span className="landing-mockup-stat-label">Products</span>
+                    <motion.span
+                      className="landing-mockup-stat-bar"
+                      initial={{ width: 0 }}
+                      animate={{ width: '70%' }}
+                      transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  </div>
+                  <div className="landing-mockup-stat">
+                    <span className="landing-mockup-stat-label">Low Stock</span>
+                    <motion.span
+                      className="landing-mockup-stat-bar"
+                      initial={{ width: 0 }}
+                      animate={{ width: '40%' }}
+                      transition={{ duration: 0.7, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  </div>
+                </div>
+                <div className="landing-mockup-charts">
+                  <motion.div
+                    className="landing-mockup-donut"
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.5 }}
+                  />
+                  <div className="landing-mockup-bars">
+                    {[40, 70, 55, 90, 35].map((h, i) => (
+                      <motion.span
+                        key={h}
+                        initial={{ height: 0 }}
+                        animate={{ height: `${h}%` }}
+                        transition={{ duration: 0.5, delay: 0.5 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           <motion.div
