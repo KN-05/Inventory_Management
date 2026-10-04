@@ -36,6 +36,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
 import BarcodeScannerModal from '../components/common/BarcodeScannerModal';
+import PageHeader from '../components/common/PageHeader';
 import { formatCurrency } from '../utils/formatCurrency';
 
 // PHASE 32: ignore the same scanned code if it comes in again within
@@ -254,9 +255,7 @@ function Sales() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Sales / Billing</h1>
-      </div>
+      <PageHeader title="Sales / Billing" subtitle="Ring up a new sale or review past invoices" />
 
       <div className="pos-tabs">
         <button
