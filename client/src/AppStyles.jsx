@@ -1139,9 +1139,16 @@ a:focus-visible {
   background: #ffffff;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 30px 60px -20px rgba(76, 29, 149, 0.35), 0 2px 8px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 30px 60px -20px rgba(49, 46, 129, 0.35), 0 2px 8px rgba(15, 23, 42, 0.06);
   transform: rotate(-1.5deg);
   border: 1px solid var(--color-border);
+}
+
+/* A smaller, non-rotated variant for tighter spaces (the login page's
+   illustration panel) where the playful tilt would feel cramped. */
+.landing-mockup-frame--compact {
+  max-width: 300px;
+  transform: none;
 }
 
 .landing-mockup-topbar {
