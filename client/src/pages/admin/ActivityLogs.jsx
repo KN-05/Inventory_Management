@@ -2,6 +2,15 @@
 // PHASE 3: Admin's full activity log view - paginated, filterable by
 // module. Unlike the Dashboard's "Recent Activity" (last 10 only), this
 // shows the complete history.
+//
+// PHASE 9: redesigned from a plain data-table into a timeline/activity
+// feed - matching the brief's "Each activity should have: Icon,
+// Description, User, Time" format, and reusing the exact same
+// .activity-list/.activity-icon/.activity-time visual language (and
+// module-icon mapping) as the Dashboard's RecentActivity widget, so the
+// two feel like the same feature at different zoom levels rather than
+// two different designs. Filtering/pagination logic is untouched - only
+// how each row is rendered changed.
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
@@ -9,6 +18,8 @@ import { getActivityLogs } from '../../api/activityLogs';
 import { roleLabel } from '../../utils/roleLabel';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+import PageHeader from '../../components/common/PageHeader';
+import Card from '../../components/common/Card';
 
 // PHASE 11 FIX: this list was missing 'purchase', 'sale', and 'customer' -
 // those log entries have existed in the database since Phases 7/8 (the
@@ -17,19 +28,32 @@ import Button from '../../components/common/Button';
 // server/models/ActivityLog.js's enum.
 const MODULES = ['product', 'supplier', 'category', 'stock', 'purchase', 'sale', 'customer', 'user', 'auth', 'other'];
 
-// Small color mapping so the module column is scannable at a glance
-// across a long mixed-activity list - purely visual, doesn't affect filtering.
-const MODULE_BADGE_CLASS = {
-  product: 'badge badge-blue',
-  category: 'badge badge-blue',
-  supplier: 'badge badge-blue',
-  stock: 'badge badge-yellow',
-  purchase: 'badge badge-green',
-  sale: 'badge badge-green',
-  customer: 'badge badge-green',
-  user: 'badge badge-red',
-  auth: 'badge badge-red',
+// Same icon-per-module mapping as components/dashboard/RecentActivity.jsx,
+// kept in sync by hand since it's a tiny const map, not worth importing
+// across an admin-page/dashboard-widget boundary for.
+const MODULE_ICONS = {
+  product: '📦',
+  category: '🗂️',
+  supplier: '🚚',
+  purchase: '🧾',
+  sale: '💰',
+  customer: '🙍',
+  stock: '📉',
+  user: '👤',
+  auth: '🔐',
 };
+
+function timeAgo(dateString) {
+  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateString).toLocaleDateString();
+}
 
 function ActivityLogs() {
   const [logs, setLogs] = useState([]);
@@ -63,9 +87,7 @@ function ActivityLogs() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Activity Logs</h1>
-      </div>
+      <PageHeader title="Activity Logs" subtitle="Full history of actions taken across the app" />
 
       {error && <p className="banner banner-error">{error}</p>}
 
@@ -91,63 +113,47 @@ function ActivityLogs() {
       ) : logs.length === 0 ? (
         <p className="empty-state">No activity recorded yet.</p>
       ) : (
-        <>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Action</th>
-                <th>Module</th>
-                <th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log, index) => (
-                <motion.tr
-                  key={log._id}
-                  initial={{ opacity: 0, x: -4 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{
-                    duration: 0.2,
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: Math.min(index, 10) * 0.02,
-                  }}
-                >
-                  <td>{log.user?.name || 'Unknown user'}</td>
-                  <td>{log.user ? roleLabel(log.user.role) : '-'}</td>
-                  <td>{log.action}</td>
-                  <td>
-                    <span className={MODULE_BADGE_CLASS[log.module] || 'badge'}>{log.module}</span>
-                  </td>
-                  <td className="cell-mono">{new Date(log.createdAt).toLocaleString()}</td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+        <Card>
+          <ul className="activity-list">
+            {logs.map((log, index) => (
+              <motion.li
+                key={log._id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 12) * 0.02 }}
+              >
+                <span className="activity-text">
+                  <span className="activity-icon" aria-hidden="true">
+                    {MODULE_ICONS[log.module] || '•'}
+                  </span>
+                  <strong>{log.user?.name || 'Unknown user'}</strong>
+                  {log.user && (
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>
+                      {' '}
+                      ({roleLabel(log.user.role)})
+                    </span>
+                  )}{' '}
+                  {log.action}
+                </span>
+                <span className="activity-time">{timeAgo(log.createdAt)}</span>
+              </motion.li>
+            ))}
+          </ul>
 
           {totalPages > 1 && (
             <div className="pagination-bar">
-              <Button
-                variant="secondary"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
+              <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Previous
               </Button>
               <span className="page-subtitle">
                 Page {page} of {totalPages}
               </span>
-              <Button
-                variant="secondary"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
+              <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                 Next
               </Button>
             </div>
           )}
-        </>
+        </Card>
       )}
     </div>
   );
