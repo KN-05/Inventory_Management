@@ -33,6 +33,7 @@ function PurchaseTable({ purchases, canManage, isAdmin, onView, onEdit, onReceiv
           <th className="col-numeric">Total</th>
           <th>Payment</th>
           <th>Status</th>
+          <th>Date</th>
           <th>Received</th>
           <th>Actions</th>
         </tr>
@@ -67,6 +68,7 @@ function PurchaseTable({ purchases, canManage, isAdmin, onView, onEdit, onReceiv
             <td>
               <span className={statusClass[p.status] || 'badge'}>{p.status}</span>
             </td>
+            <td>{new Date(p.createdAt).toLocaleDateString()}</td>
             <td>{p.receivedDate ? new Date(p.receivedDate).toLocaleDateString() : '-'}</td>
             <td className="actions-cell">
               <button className="btn-link" onClick={() => onView(p)}>
