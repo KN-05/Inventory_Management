@@ -6,6 +6,8 @@ import { useToast } from '../../context/useToast';
 import { getSettings, updateSettings } from '../../api/settings';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+import PageHeader from '../../components/common/PageHeader';
+import Card from '../../components/common/Card';
 
 function Settings() {
   const toast = useToast();
@@ -57,13 +59,11 @@ function Settings() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Settings</h1>
-      </div>
+      <PageHeader title="Settings" subtitle="System-wide preferences for the whole organization" />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
-      <div className="chart-card" style={{ maxWidth: 480 }}>
+      <Card title="General" style={{ maxWidth: 480 }}>
         {error && <p className="form-error">{error}</p>}
 
         <form className="modal-form" onSubmit={handleSubmit}>
@@ -88,7 +88,7 @@ function Settings() {
             </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }
