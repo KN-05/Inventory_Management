@@ -10,6 +10,8 @@ import { getProfile, updateProfile, changePassword, uploadPhoto } from '../api/p
 import { API_ORIGIN } from '../api/axiosInstance';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
+import PageHeader from '../components/common/PageHeader';
+import Card from '../components/common/Card';
 
 function Profile() {
   const { updateStoredUser } = useAuth();
@@ -125,9 +127,7 @@ function Profile() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Profile</h1>
-      </div>
+      <PageHeader title="Profile" subtitle="Manage your account details and password" />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
@@ -168,9 +168,7 @@ function Profile() {
 
       <div className="charts-grid" style={{ marginTop: '1rem' }}>
         {/* --- Profile details --- */}
-        <div className="chart-card">
-          <h3>Account Details</h3>
-
+        <Card title="Profile Details">
           {profileError && <p className="banner banner-error">{profileError}</p>}
 
           <form className="modal-form" onSubmit={handleProfileSubmit}>
@@ -194,12 +192,10 @@ function Profile() {
               </Button>
             </div>
           </form>
-        </div>
+        </Card>
 
         {/* --- Change password --- */}
-        <div className="chart-card">
-          <h3>Change Password</h3>
-
+        <Card title="Security">
           {passwordError && <p className="banner banner-error">{passwordError}</p>}
 
           <form className="modal-form" onSubmit={handlePasswordSubmit}>
@@ -235,7 +231,7 @@ function Profile() {
               </Button>
             </div>
           </form>
-        </div>
+        </Card>
       </div>
     </div>
   );
