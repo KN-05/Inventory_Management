@@ -1,8 +1,6 @@
 // src/components/products/ProductTable.jsx
 // Displays the product list with stock status badges and row actions.
 // `isAdmin` controls whether the Delete button is shown (Staff can't delete).
-// Animation (Phase 1 revision): row entrance is staggered with Framer
-// Motion (motion.tr) instead of CSS @keyframes/animation-delay.
 //
 // PHASE 6: added a photo thumbnail column and a "View" action (opens
 // ProductDetailsModal via onView) so every role - including Staff, who
@@ -20,7 +18,6 @@
 // on PUT /products/:id; this makes the button match the real permission.
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { API_ORIGIN } from '../../api/axiosInstance';
 
@@ -69,12 +66,9 @@ function ProductTable({ products, canManage, onEdit, onDelete, onAdjustStock, on
         </tr>
       </thead>
       <tbody>
-        {products.map((p, index) => (
-          <motion.tr
+        {products.map((p) => (
+          <tr
             key={p._id}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
             <td>
               <div className="table-thumb">
@@ -129,7 +123,7 @@ function ProductTable({ products, canManage, onEdit, onDelete, onAdjustStock, on
                 </button>
               )}
             </td>
-          </motion.tr>
+          </tr>
         ))}
       </tbody>
     </table>

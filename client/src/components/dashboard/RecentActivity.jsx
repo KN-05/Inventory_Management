@@ -1,12 +1,10 @@
 // src/components/dashboard/RecentActivity.jsx
-// Lists the most recent ActivityLog entries (created by the backend every
-// time a product/category/supplier is created, updated, deleted, or
-// stock is adjusted - see Phase 4/5's logActivity() calls).
-//
-// PHASE 18: added a small icon per `module` value (the exact set the
-// backend actually logs - see logActivity() call sites) purely for visual
-// scanning; falls back to a neutral dot for any value not in the map so
-// nothing ever renders blank.
+// Lists the most recent ActivityLog entries (written by the backend's
+// logActivity() whenever someone creates/updates/deletes something).
+// Each row: module icon, who did what, and when. Hovering the time shows
+// the exact date and time.
+
+import ModuleIcon from '../common/ModuleIcon';
 
 function timeAgo(dateString) {
   const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
@@ -19,21 +17,14 @@ function timeAgo(dateString) {
   return `${days}d ago`;
 }
 
-const MODULE_ICONS = {
-  product: '📦',
-  category: '🗂️',
-  supplier: '🚚',
-  purchase: '🧾',
-  sale: '💰',
-  customer: '🙍',
-  stock: '📉',
-  user: '👤',
-  auth: '🔐',
-};
-
 function RecentActivity({ activities }) {
   if (activities.length === 0) {
-    return <p className="empty-state">No activity yet. Actions you take will show up here.</p>;
+    return (
+      <div className="panel-empty">
+        <strong>No activity yet</strong>
+        Actions your team takes will be listed here.
+      </div>
+    );
   }
 
   return (
@@ -42,11 +33,13 @@ function RecentActivity({ activities }) {
         <li key={a.id}>
           <span className="activity-text">
             <span className="activity-icon" aria-hidden="true">
-              {MODULE_ICONS[a.module] || '•'}
+              <ModuleIcon module={a.module} />
             </span>
             <strong>{a.user}</strong> {a.action}
           </span>
-          <span className="activity-time">{timeAgo(a.createdAt)}</span>
+          <span className="activity-time" title={new Date(a.createdAt).toLocaleString()}>
+            {timeAgo(a.createdAt)}
+          </span>
         </li>
       ))}
     </ul>
@@ -54,4 +47,3 @@ function RecentActivity({ activities }) {
 }
 
 export default RecentActivity;
-

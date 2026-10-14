@@ -4,7 +4,6 @@
 // 'received' one is a permanent record - only its payment status can
 // still change.
 
-import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 const statusClass = {
@@ -39,12 +38,9 @@ function PurchaseTable({ purchases, canManage, isAdmin, onView, onEdit, onReceiv
         </tr>
       </thead>
       <tbody>
-        {purchases.map((p, index) => (
-          <motion.tr
+        {purchases.map((p) => (
+          <tr
             key={p._id}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
             <td className="cell-mono">{p.purchaseNumber}</td>
             <td>{p.supplier?.name || '-'}</td>
@@ -90,7 +86,7 @@ function PurchaseTable({ purchases, canManage, isAdmin, onView, onEdit, onReceiv
                 </button>
               )}
             </td>
-          </motion.tr>
+          </tr>
         ))}
       </tbody>
     </table>

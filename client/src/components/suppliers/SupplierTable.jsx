@@ -3,7 +3,6 @@
 // `canManage` gates both Edit and Delete - Staff has view-only access per
 // the permission map (PHASE 4 fix, Edit was previously shown to everyone).
 
-import { motion } from 'framer-motion';
 
 function SupplierTable({ suppliers, canManage, onEdit, onDelete }) {
   if (suppliers.length === 0) {
@@ -24,12 +23,9 @@ function SupplierTable({ suppliers, canManage, onEdit, onDelete }) {
         </tr>
       </thead>
       <tbody>
-        {suppliers.map((s, index) => (
-          <motion.tr
+        {suppliers.map((s) => (
+          <tr
             key={s._id}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
             <td>{s.name}</td>
             <td>{s.companyName || '-'}</td>
@@ -55,7 +51,7 @@ function SupplierTable({ suppliers, canManage, onEdit, onDelete }) {
                 <span className="page-subtitle">View only</span>
               )}
             </td>
-          </motion.tr>
+          </tr>
         ))}
       </tbody>
     </table>

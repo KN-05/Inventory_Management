@@ -7,6 +7,8 @@
 // reference design's pill-style search field) - purely a markup/CSS
 // change, the same onSearchChange callback still fires on every keystroke.
 
+import { Search } from 'lucide-react';
+import { ICON_SM } from '../../utils/iconProps';
 function ProductFilters({
   search,
   onSearchChange,
@@ -18,12 +20,14 @@ function ProductFilters({
   onStatusChange,
   categories,
   suppliers,
+  sort,
+  onSortChange,
 }) {
   return (
     <div className="filters-bar">
       <div className="filters-search-wrap">
         <span className="filters-search-icon" aria-hidden="true">
-          🔍
+          <Search {...ICON_SM} />
         </span>
         <input
           type="text"
@@ -58,6 +62,19 @@ function ProductFilters({
         <option value="Low Stock">Low Stock</option>
         <option value="Out of Stock">Out of Stock</option>
       </select>
+
+      {/* Sorts the already-loaded list client-side - no extra API call. */}
+      {onSortChange && (
+        <select value={sort} onChange={(e) => onSortChange(e.target.value)}>
+          <option value="">Sort: Default</option>
+          <option value="name-asc">Name (A-Z)</option>
+          <option value="name-desc">Name (Z-A)</option>
+          <option value="price-asc">Price (Low-High)</option>
+          <option value="price-desc">Price (High-Low)</option>
+          <option value="quantity-asc">Stock (Low-High)</option>
+          <option value="quantity-desc">Stock (High-Low)</option>
+        </select>
+      )}
     </div>
   );
 }

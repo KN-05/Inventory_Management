@@ -3,7 +3,6 @@
 // PHASE 21: added a small initials avatar before each customer's name -
 // purely visual (same pattern as the Sidebar/Navbar avatars), no new data.
 
-import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 function CustomerTable({ customers, canManage, onEdit, onDelete }) {
@@ -25,12 +24,9 @@ function CustomerTable({ customers, canManage, onEdit, onDelete }) {
         </tr>
       </thead>
       <tbody>
-        {customers.map((c, index) => (
-          <motion.tr
+        {customers.map((c) => (
+          <tr
             key={c._id}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
             <td>
               <span className="cell-with-avatar">
@@ -57,7 +53,7 @@ function CustomerTable({ customers, canManage, onEdit, onDelete }) {
                 <span className="page-subtitle">View only</span>
               )}
             </td>
-          </motion.tr>
+          </tr>
         ))}
       </tbody>
     </table>

@@ -15,6 +15,8 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
 import PageHeader from '../components/common/PageHeader';
+import { Search } from 'lucide-react';
+import { ICON_SM } from '../utils/iconProps';
 
 function Customers() {
   const { isAdmin, isManager } = useAuth();
@@ -121,7 +123,7 @@ function Customers() {
       <div className="filters-bar">
         <div className="filters-search-wrap">
           <span className="filters-search-icon" aria-hidden="true">
-            🔍
+            <Search {...ICON_SM} />
           </span>
           <input
             type="text"

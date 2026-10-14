@@ -13,6 +13,7 @@ const {
   createUser,
   updateUserStatus,
   updateUserRole,
+  deleteUser,
   adminResetPassword,
   requestStaffPasswordResetOtp,
   resetStaffPasswordWithOtp,
@@ -41,8 +42,10 @@ const { runValidation } = require('../middleware/validateMiddleware');
 
 router.use(protect);
 
-// --- User management: Admin only ---
-router.get('/users', authorize('admin'), getUsers);
+// --- User management ---
+// PHASE 34: list + status toggle are now Admin + Manager; create, role
+// change, password reset, and delete remain Admin-only.
+router.get('/users', authorize('admin', 'manager'), getUsers);
 
 router.post(
   '/users',
@@ -60,10 +63,14 @@ router.post(
 
 router.patch(
   '/users/:id/status',
-  authorize('admin'),
+  authorize('admin', 'manager'),
   runValidation([body('isActive').isBoolean().withMessage('isActive must be true or false')]),
   updateUserStatus
 );
+
+// PHASE 34: delete is deliberately Admin-only - Manager can deactivate
+// but never permanently remove an account.
+router.delete('/users/:id', authorize('admin'), deleteUser);
 
 router.patch(
   '/users/:id/role',

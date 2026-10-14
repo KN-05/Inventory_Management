@@ -17,6 +17,19 @@
 
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import {
+  Package,
+  Boxes,
+  ArrowLeftRight,
+  ChartNoAxesCombined,
+  Users,
+  Bell,
+  ShieldCheck,
+  PackagePlus,
+  Lightbulb,
+  ClipboardList,
+  ReceiptText,
+} from 'lucide-react';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -30,50 +43,50 @@ const stagger = {
 
 const features = [
   {
-    icon: '📦',
+    icon: <Package size={24} strokeWidth={1.75} />,
     title: 'Product Management',
     text: 'Add, organize, and track every product and category in one catalog.',
   },
   {
-    icon: '📊',
+    icon: <Boxes size={24} strokeWidth={1.75} />,
     title: 'Inventory Tracking',
     text: 'Monitor stock levels in real time and get notified before items run out.',
   },
   {
-    icon: '💰',
+    icon: <ArrowLeftRight size={24} strokeWidth={1.75} />,
     title: 'Sales & Purchases',
     text: 'Record sales and purchase orders and keep supplier transactions organized.',
   },
   {
-    icon: '📈',
+    icon: <ChartNoAxesCombined size={24} strokeWidth={1.75} />,
     title: 'Reports',
     text: 'Turn your inventory and sales data into reports you can actually act on.',
   },
 ];
 
 const capabilities = [
-  { icon: '🔐', label: '3 User Roles' },
-  { icon: '⚡', label: 'Real-time Stock Alerts' },
-  { icon: '🛡️', label: 'JWT Secured Login' },
-  { icon: '📑', label: 'Built-in Reports & Analytics' },
+  { icon: <Users size={16} strokeWidth={1.75} />, label: '3 User Roles' },
+  { icon: <Bell size={16} strokeWidth={1.75} />, label: 'Real-time Stock Alerts' },
+  { icon: <ShieldCheck size={16} strokeWidth={1.75} />, label: 'JWT Secured Login' },
+  { icon: <ChartNoAxesCombined size={16} strokeWidth={1.75} />, label: 'Built-in Reports & Analytics' },
 ];
 
 const steps = [
   {
     number: '01',
-    icon: '🗂️',
+    icon: <PackagePlus size={24} strokeWidth={1.75} />,
     title: 'Add your products',
     text: 'Set up categories, suppliers, and starting stock levels for your catalog.',
   },
   {
     number: '02',
-    icon: '🔄',
+    icon: <ArrowLeftRight size={24} strokeWidth={1.75} />,
     title: 'Track sales & purchases',
     text: 'Record every transaction and watch stock levels update automatically.',
   },
   {
     number: '03',
-    icon: '💡',
+    icon: <Lightbulb size={24} strokeWidth={1.75} />,
     title: 'Get real insights',
     text: 'Check dashboards and reports to see what to reorder and what sells.',
   },
@@ -81,17 +94,17 @@ const steps = [
 
 const personas = [
   {
-    icon: '👑',
+    icon: <ShieldCheck size={28} strokeWidth={1.75} />,
     role: 'Admin',
     text: 'Full control of the system - manage users, review activity logs, configure settings, and access every module.',
   },
   {
-    icon: '📋',
+    icon: <ClipboardList size={28} strokeWidth={1.75} />,
     role: 'Manager',
     text: 'Handles purchases, runs reports and analytics, and keeps day-to-day inventory operations on track.',
   },
   {
-    icon: '🧾',
+    icon: <ReceiptText size={28} strokeWidth={1.75} />,
     role: 'Staff',
     text: 'A focused, simplified dashboard for daily customer billing and sales, without the extra clutter.',
   },

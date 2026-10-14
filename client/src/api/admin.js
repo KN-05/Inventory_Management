@@ -13,6 +13,11 @@ export const updateUserStatus = (id, isActive) =>
 export const updateUserRole = (id, role) =>
   axiosInstance.patch(`/admin/users/${id}/role`, { role }).then((res) => res.data);
 
+// PHASE 34: permanently delete a user - Admin only (enforced on the
+// backend too; the button is also hidden for Manager in the UI).
+export const deleteUser = (id) =>
+  axiosInstance.delete(`/admin/users/${id}`).then((res) => res.data);
+
 // PHASE 26: Admin directly resets any user's password (no OTP - the
 // Admin performing this is already fully authenticated).
 export const adminResetPassword = (id, newPassword) =>

@@ -4,6 +4,7 @@
 // permission at all, per the spec's Staff "Allowed" list.
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
 import { getSupplierOptions, getProductOptions } from '../api/lookups';
@@ -25,10 +26,13 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
 import PageHeader from '../components/common/PageHeader';
+import { Search } from 'lucide-react';
+import { ICON_SM } from '../utils/iconProps';
 
 function Purchases() {
   const { isAdmin, isManager } = useAuth();
   const canManage = isAdmin || isManager; // both roles have full purchase permissions
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
 
   const [purchases, setPurchases] = useState([]);
@@ -86,6 +90,21 @@ function Purchases() {
     setFormError('');
     setFormOpen(true);
   };
+
+  // Dashboard quick action: /purchases?new=1 opens the New Purchase Order
+  // form once (Admin/Manager only), then clears the flag.
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    if (canManage) {
+      setEditingPurchase(null);
+      setFormError('');
+      setFormOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openEditForm = (purchase) => {
     setEditingPurchase(purchase);
@@ -180,7 +199,7 @@ function Purchases() {
       <div className="filters-bar">
         <div className="filters-search-wrap">
           <span className="filters-search-icon" aria-hidden="true">
-            🔍
+            <Search {...ICON_SM} />
           </span>
           <input
             type="text"

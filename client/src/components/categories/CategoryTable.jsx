@@ -3,7 +3,6 @@
 // `canManage` gates both Edit and Delete - Staff has view-only access per
 // the permission map (PHASE 4 fix, Edit was previously shown to everyone).
 
-import { motion } from 'framer-motion';
 import { API_ORIGIN } from '../../api/axiosInstance';
 
 function CategoryTable({ categories, canManage, onEdit, onDelete }) {
@@ -23,12 +22,9 @@ function CategoryTable({ categories, canManage, onEdit, onDelete }) {
         </tr>
       </thead>
       <tbody>
-        {categories.map((c, index) => (
-          <motion.tr
+        {categories.map((c) => (
+          <tr
             key={c._id}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
             <td>
               <div className="table-thumb">
@@ -60,7 +56,7 @@ function CategoryTable({ categories, canManage, onEdit, onDelete }) {
                 <span className="page-subtitle">View only</span>
               )}
             </td>
-          </motion.tr>
+          </tr>
         ))}
       </tbody>
     </table>

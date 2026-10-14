@@ -28,6 +28,8 @@ import { getSalesAnalytics, getPurchaseAnalytics, getProfitAnalytics } from '../
 import { formatCurrency } from '../../utils/formatCurrency';
 import Loader from '../../components/common/Loader';
 import StatCard from '../../components/dashboard/StatCard';
+import { IndianRupee, PackageCheck, ReceiptText, TrendingUp, Wallet } from 'lucide-react';
+import { ICON_SM } from '../../utils/iconProps';
 
 function Analytics() {
   const [sales, setSales] = useState(null);
@@ -81,8 +83,8 @@ function Analytics() {
       <div className="chart-card" style={{ marginBottom: '1rem' }}>
         <h3>Sales Analytics</h3>
         <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <StatCard index={0} icon="🧾" label="Total Orders" value={sales.totalOrders} />
-          <StatCard index={1} icon="💵" tone="success" label="Total Revenue" value={formatCurrency(sales.totalRevenue)} />
+          <StatCard index={0} icon={<ReceiptText {...ICON_SM} />} label="Total Orders" value={sales.totalOrders} />
+          <StatCard index={1} icon={<IndianRupee {...ICON_SM} />} label="Total Revenue" value={formatCurrency(sales.totalRevenue)} />
         </div>
 
         <div className="pos-tabs" style={{ marginBottom: '0.75rem' }}>
@@ -144,10 +146,10 @@ function Analytics() {
       <div className="chart-card" style={{ marginBottom: '1rem' }}>
         <h3>Purchase Analytics</h3>
         <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <StatCard index={0} icon="📦" label="Received Purchase Orders" value={purchases.totalPurchases} />
+          <StatCard index={0} icon={<PackageCheck {...ICON_SM} />} label="Received Purchase Orders" value={purchases.totalPurchases} />
           <StatCard
             index={1}
-            icon="🧾"
+            icon={<IndianRupee {...ICON_SM} />}
             tone="warning"
             label="Total Purchase Value"
             value={formatCurrency(purchases.totalValue)}
@@ -199,9 +201,9 @@ function Analytics() {
         {profit.note && <p className="banner banner-warning">{profit.note}</p>}
 
         <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <StatCard index={0} icon="💵" label="Total Revenue" value={formatCurrency(profit.totals.totalRevenue)} />
-          <StatCard index={1} icon="💸" label="Total Cost" value={formatCurrency(profit.totals.totalCost)} />
-          <StatCard index={2} icon="📈" tone="success" label="Total Profit" value={formatCurrency(profit.totals.totalProfit)} />
+          <StatCard index={0} icon={<IndianRupee {...ICON_SM} />} label="Total Revenue" value={formatCurrency(profit.totals.totalRevenue)} />
+          <StatCard index={1} icon={<Wallet {...ICON_SM} />} label="Total Cost" value={formatCurrency(profit.totals.totalCost)} />
+          <StatCard index={2} icon={<TrendingUp {...ICON_SM} />} label="Total Profit" value={formatCurrency(profit.totals.totalProfit)} />
         </div>
 
         {profit.monthly.length > 0 && (

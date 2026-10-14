@@ -1,32 +1,32 @@
 // src/components/dashboard/StatCard.jsx
-// A single metric tile, e.g. "Total Products: 42".
-// Animation (Phase 1 revision): entrance fade/slide and hover-lift are
-// done with Framer Motion instead of CSS @keyframes/transitions - the
-// `index` prop staggers each card's entrance by a small delay.
+// A small metric tile: label + icon on top, one large number below.
+// Used on several pages (Stock Alerts, Attendance, User Management,
+// Analytics, Reports).
 //
-// PHASE 18: added an optional `icon` prop (a small emoji/glyph shown in a
-// colored circular badge above the label) to match the reference design's
-// icon-led stat cards. Purely additive - every existing caller that
-// doesn't pass `icon` renders exactly as before, so other pages reusing
-// this component (Reports, Analytics, Stock Alerts, etc.) are unaffected.
+// Colour is reserved for meaning: `tone="warning"` (amber) and
+// `tone="danger"` (red) colour the value and icon; every other tone
+// ("default", "success") stays neutral - a number isn't "good" just because
+// it's a revenue figure. No entrance animation, no hover lift.
+//
+// `icon` is any React node (pass a lucide icon element). `index` is
+// accepted for backwards compatibility with existing call sites.
 
-import { motion } from 'framer-motion';
+function StatCard({ icon, label, value, tone = 'default' }) {
+  const toneClass = tone === 'warning' || tone === 'danger' ? ` stat-card-${tone}` : '';
 
-function StatCard({ label, value, tone = 'default', index = 0, icon }) {
   return (
-    <motion.div
-      className={`stat-card stat-card-${tone}`}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1], delay: index * 0.04 }}
-      whileHover={{ y: -2 }}
-    >
-      {icon && <span className={`stat-card-icon stat-card-icon-${tone}`}>{icon}</span>}
-      <p className="stat-card-label">{label}</p>
+    <div className={`stat-card${toneClass}`}>
+      <div className="stat-card-head">
+        <p className="stat-card-label">{label}</p>
+        {icon && (
+          <span className="stat-card-icon" aria-hidden="true">
+            {icon}
+          </span>
+        )}
+      </div>
       <p className="stat-card-value">{value}</p>
-    </motion.div>
+    </div>
   );
 }
 
 export default StatCard;
-

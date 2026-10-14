@@ -8,7 +8,6 @@
 // outside the slices, which looked unfinished) - visual polish only,
 // the underlying data and role color themes are unchanged.
 
-import { motion } from 'framer-motion';
 import {
   PieChart,
   Pie,
@@ -23,16 +22,11 @@ import {
   CartesianGrid,
 } from 'recharts';
 
+// Status colours match the badge colours used in the tables.
 const STATUS_COLORS = {
-  'In Stock': '#12b76a',
-  'Low Stock': '#f79009',
-  'Out of Stock': '#f04438',
-};
-
-const cardMotion = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+  'In Stock': '#16a34a',
+  'Low Stock': '#d97706',
+  'Out of Stock': '#dc2626',
 };
 
 // Renders "37%" centered on each slice instead of recharts' default
@@ -62,12 +56,17 @@ function StockChart({ stockStatusBreakdown, categoryBreakdown }) {
 
   return (
     <div className="charts-grid">
-      <motion.div className="chart-card" {...cardMotion}>
-        <h3>Stock Status Breakdown</h3>
+      <section className="panel" aria-label="Stock status breakdown">
+        <div className="panel-header">
+          <h2 className="panel-title">Stock status</h2>
+        </div>
         {pieData.length === 0 ? (
-          <p className="empty-state">No products yet</p>
+          <div className="panel-empty">
+            <strong>No products yet</strong>
+            Add products to see how your stock is distributed.
+          </div>
         ) : (
-          <div className="donut-chart-wrap">
+          <div className="donut-chart-wrap panel-body">
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie
@@ -81,6 +80,7 @@ function StockChart({ stockStatusBreakdown, categoryBreakdown }) {
                   strokeWidth={2}
                   label={renderPercentLabel}
                   labelLine={false}
+                  isAnimationActive={false}
                 >
                   {pieData.map((entry) => (
                     <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
@@ -97,24 +97,42 @@ function StockChart({ stockStatusBreakdown, categoryBreakdown }) {
             </div>
           </div>
         )}
-      </motion.div>
+      </section>
 
-      <motion.div className="chart-card" {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.05 }}>
-        <h3>Products by Category</h3>
+      <section className="panel" aria-label="Products by category">
+        <div className="panel-header">
+          <h2 className="panel-title">Products by category</h2>
+        </div>
         {categoryBreakdown.length === 0 ? (
-          <p className="empty-state">No products yet</p>
+          <div className="panel-empty">
+            <strong>No products yet</strong>
+            Products will be grouped by category here.
+          </div>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={categoryBreakdown} barSize={36}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.5} />
-              <XAxis dataKey="category" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} axisLine={false} tickLine={false} width={28} />
-              <Tooltip cursor={{ fill: 'rgba(79, 70, 229, 0.06)' }} />
-              <Bar dataKey="count" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="panel-body">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={categoryBreakdown} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                <XAxis
+                  dataKey="category"
+                  tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  axisLine={false}
+                  tickLine={false}
+                  width={28}
+                  tick={{ fill: 'var(--color-text-secondary)' }}
+                />
+                <Tooltip cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }} />
+                <Bar dataKey="count" name="Products" fill="var(--color-primary)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
-      </motion.div>
+      </section>
     </div>
   );
 }

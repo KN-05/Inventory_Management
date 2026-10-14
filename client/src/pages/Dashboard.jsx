@@ -1,248 +1,363 @@
 // src/pages/Dashboard.jsx
-// Every number and chart here comes from GET /api/dashboard/summary - a
-// real backend aggregation over live MongoDB data (Phase 6). Navigation
-// and logout now live in the shared Sidebar/Navbar (Phase 10), so this
-// page focuses purely on the stats themselves.
+// Admin / Manager dashboard. Every figure comes from a real backend call:
+//   GET /api/dashboard/summary        - counts, stock value, alerts, activity
+//   GET /api/admin/analytics/sales    - total revenue + daily sales
+//   GET /api/admin/analytics/purchases- total purchase value
+//   GET /api/sales, /api/purchases    - the latest transactions
+//   GET /api/products?status=...      - products at/below their reorder level
+// Nothing is hard-coded or estimated. Each section loads on its own, so a
+// failed request shows an error only in that section.
 //
-// PHASE 4: Manager (Accountant/Manager) sees the same underlying data as
-// Admin, but with stat cards reordered to lead with what they primarily
-// care about per the spec ("finance, operations, inventory") - stock
-// value and active alerts first, instead of raw product counts - plus a
-// quick link into Reports, their main additional module.
+// Staff get a separate, simpler dashboard (pages/staff/StaffDashboard.jsx)
+// because they must not see financial totals such as stock value.
 //
-// PHASE 5: Staff get a completely separate, simplified dashboard (see
-// pages/staff/StaffDashboard.jsx) instead of a variant of this one, since
-// they must not see the financial "Total Stock Value" figure at all. This
-// component is left exactly as it was for Admin/Manager; only the early
-// `isStaff` branch below is new.
-//
-// PHASE 18: visual refresh to match the reference SaaS design - a
-// time-of-day greeting, an icon on every stat card, and (Admin/Manager
-// only) two more REAL stat cards - Total Sales and Total Purchases - plus
-// a "Sales Overview" line chart. All three reuse the exact same
-// api/admin.js analytics calls the existing Analytics page already uses
-// (GET /api/admin/analytics/sales|purchases) - no new backend endpoint,
-// no invented numbers. If that extra fetch fails for any reason the two
-// cards/chart are simply omitted; the core summary above is unaffected.
+// Layout: header + quick actions, two KPI strips (business / inventory),
+// then a two-column working area (sales chart + recent transactions beside
+// low-stock products + recent activity), then the stock charts.
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import {
+  Plus,
+  ShoppingCart,
+  ShoppingBag,
+  CalendarDays,
+  IndianRupee,
+  Wallet,
+  Package,
+  TriangleAlert,
+  PackageX,
+  CircleAlert,
+  Truck,
+  Tags,
+} from 'lucide-react';
 import { useAuth } from '../context/useAuth';
-import { roleLabel } from '../utils/roleLabel';
 import { formatCurrency } from '../utils/formatCurrency';
+import { ICON_SM } from '../utils/iconProps';
+import { useLoad } from '../utils/useLoad';
 import { getDashboardSummary } from '../api/dashboard';
 import { getSalesAnalytics, getPurchaseAnalytics } from '../api/admin';
+import { getSales } from '../api/sales';
+import { getPurchases } from '../api/purchases';
+import { getProducts } from '../api/products';
 
-import StatCard from '../components/dashboard/StatCard';
+import KpiGroup from '../components/dashboard/KpiGroup';
 import StockChart from '../components/dashboard/StockChart';
 import SalesOverviewChart from '../components/dashboard/SalesOverviewChart';
 import RecentActivity from '../components/dashboard/RecentActivity';
-import Loader from '../components/common/Loader';
+import RecentTransactions from '../components/dashboard/RecentTransactions';
+import LowStockTable from '../components/dashboard/LowStockTable';
+import { PanelError, PanelLoading } from '../components/dashboard/PanelState';
 import StaffDashboard from './staff/StaffDashboard';
 
-// Plain, honest greeting based on the visitor's own clock - not a fake
-// personalization claim, just `new Date().getHours()`.
-function timeGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 17) return 'Good Afternoon';
-  return 'Good Evening';
+// ---- loaders (module level so their identity is stable for useLoad) ----
+const loadSummary = () => getDashboardSummary();
+const loadSalesAnalytics = () => getSalesAnalytics();
+const loadPurchaseAnalytics = () => getPurchaseAnalytics();
+
+// Latest sales + purchase orders merged into one newest-first list.
+const loadTransactions = async () => {
+  const [salesRes, purchasesRes] = await Promise.allSettled([
+    getSales({ limit: 6 }),
+    getPurchases({ limit: 6 }),
+  ]);
+  // If both fail there is nothing to show - surface the error. If only one
+  // fails, still show the other rather than hiding everything.
+  if (salesRes.status === 'rejected' && purchasesRes.status === 'rejected') throw salesRes.reason;
+
+  const sales = salesRes.status === 'fulfilled' ? salesRes.value.sales : [];
+  const purchases = purchasesRes.status === 'fulfilled' ? purchasesRes.value.purchases : [];
+
+  return [
+    ...sales.map((s) => ({
+      type: 'sale',
+      id: s._id,
+      reference: s.invoiceNumber,
+      party: s.customer?.name || 'Walk-in customer',
+      date: s.createdAt,
+      amount: s.totalAmount,
+      status: s.status,
+      paymentStatus: s.paymentStatus,
+    })),
+    ...purchases.map((p) => ({
+      type: 'purchase',
+      id: p._id,
+      reference: p.purchaseNumber,
+      party: p.supplier?.name || '—',
+      date: p.createdAt,
+      amount: p.totalAmount,
+      status: p.status,
+      paymentStatus: p.paymentStatus,
+    })),
+  ]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 8);
+};
+
+// Out-of-stock products first, then low-stock from the lowest quantity up.
+const loadLowStock = async () => {
+  const [out, low] = await Promise.all([
+    getProducts({ status: 'Out of Stock', limit: 8 }),
+    getProducts({ status: 'Low Stock', limit: 50 }),
+  ]);
+  const ordered = [...out.products, ...[...low.products].sort((a, b) => a.quantity - b.quantity)];
+  return { products: ordered.slice(0, 8), total: (out.total ?? out.products.length) + (low.total ?? low.products.length) };
+};
+
+// Compares the last 7 days of sales with the 7 days before, using the same
+// UTC calendar days the backend groups by. Returns null when there's no
+// data to compare so the UI never invents a percentage.
+function weekOverWeek(daily) {
+  if (!daily) return null;
+  const now = new Date();
+  const dayKey = (offset) =>
+    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - offset)).toISOString().slice(0, 10);
+  const thisWeek = new Set(Array.from({ length: 7 }, (_, i) => dayKey(i)));
+  const lastWeek = new Set(Array.from({ length: 7 }, (_, i) => dayKey(i + 7)));
+  let current = 0;
+  let previous = 0;
+  daily.forEach((d) => {
+    if (thisWeek.has(d.date)) current += d.total;
+    else if (lastWeek.has(d.date)) previous += d.total;
+  });
+  return { current, previous };
+}
+
+function salesSubline(daily) {
+  const w = weekOverWeek(daily);
+  if (!w) return null;
+  if (w.current === 0 && w.previous === 0) return 'No sales in the last 14 days';
+  if (w.previous === 0) return `${formatCurrency(w.current)} in last 7 days`;
+  const change = ((w.current - w.previous) / w.previous) * 100;
+  if (Math.abs(change) < 0.05) return `${formatCurrency(w.current)} last 7 days, unchanged`;
+  const up = change > 0;
+  return (
+    <>
+      {formatCurrency(w.current)} last 7 days,{' '}
+      <span className={up ? 'kpi-delta-up' : 'kpi-delta-down'}>
+        {up ? '+' : '−'}
+        {Math.abs(change).toFixed(1)}%
+      </span>{' '}
+      vs previous 7
+    </>
+  );
 }
 
 function Dashboard() {
-  const { user, isAdmin, isManager, isStaff } = useAuth();
-  const [summary, setSummary] = useState(null);
-  const [error, setError] = useState('');
-  const [salesAnalytics, setSalesAnalytics] = useState(null);
-  const [purchaseAnalytics, setPurchaseAnalytics] = useState(null);
+  const { isAdmin, isManager, isStaff } = useAuth();
+  const enabled = !isStaff; // Staff are handed off to StaffDashboard below
 
-  // PHASE 5: Staff never need this Admin/Manager-shaped summary fetch at
-  // all - they're handed off to <StaffDashboard /> below, which does its
-  // own fetch. Hooks must still be called unconditionally on every
-  // render, so the `isStaff` check lives inside the effect, not around it.
-  useEffect(() => {
-    if (isStaff) return;
-    getDashboardSummary()
-      .then(setSummary)
-      .catch((err) => setError(err.response?.data?.message || 'Failed to load dashboard'));
-  }, [isStaff]);
+  const summary = useLoad(loadSummary, enabled);
+  const sales = useLoad(loadSalesAnalytics, enabled);
+  const purchases = useLoad(loadPurchaseAnalytics, enabled);
+  const transactions = useLoad(loadTransactions, enabled);
+  const lowStock = useLoad(loadLowStock, enabled);
 
-  // PHASE 18: Sales/Purchase analytics power the two extra stat cards +
-  // the line chart, Admin/Manager only (same permission the Analytics
-  // page already requires). Fetched separately from the summary above so
-  // a failure here never blocks the core dashboard from rendering.
-  useEffect(() => {
-    if (isStaff || !(isAdmin || isManager)) return;
-    getSalesAnalytics().then(setSalesAnalytics).catch(() => {});
-    getPurchaseAnalytics().then(setPurchaseAnalytics).catch(() => {});
-  }, [isStaff, isAdmin, isManager]);
-
-  // Hand off entirely to the dedicated, simplified Staff dashboard. Safe
-  // to return early here since every hook above has already run.
   if (isStaff) {
     return <StaffDashboard />;
   }
 
-  // Same numbers for every role - only the ORDER changes, so a Manager's
-  // financial/operational priorities (stock value, alerts) lead instead of
-  // raw counts. No data is hidden; this is purely a presentation choice.
-  const salesCard = salesAnalytics && {
-    key: 'totalSales',
-    label: 'Total Sales',
-    value: formatCurrency(salesAnalytics.totalRevenue),
-    tone: 'success',
-    icon: '💵',
-  };
-  const purchasesCard = purchaseAnalytics && {
-    key: 'totalPurchases',
-    label: 'Total Purchases',
-    value: formatCurrency(purchaseAnalytics.totalValue),
-    tone: 'default',
-    icon: '🧾',
-  };
+  const s = summary.data;
+  const todayLabel = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
-  const statCards = isManager
+  const businessItems = [
+    {
+      key: 'sales',
+      label: 'Total sales',
+      icon: IndianRupee,
+      to: '/sales',
+      loading: sales.loading,
+      error: !!sales.error,
+      value: sales.data && formatCurrency(sales.data.totalRevenue),
+      sub: sales.data && salesSubline(sales.data.daily),
+    },
+    {
+      key: 'purchases',
+      label: 'Total purchases',
+      icon: ShoppingBag,
+      to: '/purchases',
+      loading: purchases.loading,
+      error: !!purchases.error,
+      value: purchases.data && formatCurrency(purchases.data.totalValue),
+      sub: 'Received orders only',
+    },
+    {
+      key: 'stockValue',
+      label: 'Total stock value',
+      icon: Wallet,
+      to: '/admin/reports',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s && formatCurrency(s.totalStockValue),
+      sub: s && `Across ${s.totalProducts} products`,
+    },
+  ];
+
+  const inventoryItems = [
+    {
+      key: 'products',
+      label: 'Total products',
+      icon: Package,
+      to: '/products',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s?.totalProducts,
+      sub: s && `${s.stockStatusBreakdown.inStock} in stock`,
+    },
+    {
+      key: 'lowStock',
+      label: 'Low stock items',
+      icon: TriangleAlert,
+      to: '/alerts',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s?.stockStatusBreakdown.lowStock,
+      tone: s?.stockStatusBreakdown.lowStock > 0 ? 'warning' : undefined,
+      sub: 'At or below reorder level',
+    },
+    {
+      key: 'outOfStock',
+      label: 'Out of stock items',
+      icon: PackageX,
+      to: '/alerts',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s?.stockStatusBreakdown.outOfStock,
+      tone: s?.stockStatusBreakdown.outOfStock > 0 ? 'danger' : undefined,
+      sub: 'Zero quantity',
+    },
+    {
+      key: 'alerts',
+      label: 'Active alerts',
+      icon: CircleAlert,
+      to: '/alerts',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s?.activeAlertsCount,
+      tone: s?.activeAlertsCount > 0 ? 'warning' : undefined,
+      sub: 'Not yet resolved',
+    },
+    {
+      key: 'suppliers',
+      label: 'Suppliers',
+      icon: Truck,
+      to: '/suppliers',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s?.totalSuppliers,
+    },
+    {
+      key: 'categories',
+      label: 'Categories',
+      icon: Tags,
+      to: '/categories',
+      loading: summary.loading,
+      error: !!summary.error,
+      value: s?.totalCategories,
+    },
+  ];
+
+  // Manager leads with the money; Admin leads with inventory. Same numbers,
+  // different order.
+  const groups = isManager
     ? [
-        salesCard,
-        purchasesCard,
-        {
-          key: 'stockValue',
-          label: 'Total Stock Value',
-          value: formatCurrency(summary?.totalStockValue),
-          tone: 'success',
-          icon: '💰',
-        },
-        {
-          key: 'activeAlerts',
-          label: 'Active Alerts',
-          value: summary?.activeAlertsCount,
-          tone: summary?.activeAlertsCount > 0 ? 'warning' : 'default',
-          icon: '🔔',
-        },
-        { key: 'lowStock', label: 'Low Stock', value: summary?.stockStatusBreakdown.lowStock, tone: 'warning', icon: '⚠️' },
-        {
-          key: 'outOfStock',
-          label: 'Out of Stock',
-          value: summary?.stockStatusBreakdown.outOfStock,
-          tone: 'danger',
-          icon: '🚫',
-        },
-        { key: 'totalProducts', label: 'Total Products', value: summary?.totalProducts, icon: '📦' },
-        { key: 'totalSuppliers', label: 'Total Suppliers', value: summary?.totalSuppliers, icon: '🚚' },
-        { key: 'totalCategories', label: 'Total Categories', value: summary?.totalCategories, icon: '🗂️' },
-      ].filter(Boolean)
+        <KpiGroup key="b" title="Business" columns={3} items={businessItems} />,
+        <KpiGroup key="i" title="Inventory" columns={6} items={inventoryItems} />,
+      ]
     : [
-        { key: 'totalProducts', label: 'Total Products', value: summary?.totalProducts, icon: '📦' },
-        salesCard,
-        purchasesCard,
-        { key: 'lowStock', label: 'Low Stock', value: summary?.stockStatusBreakdown.lowStock, tone: 'warning', icon: '⚠️' },
-        {
-          key: 'outOfStock',
-          label: 'Out of Stock',
-          value: summary?.stockStatusBreakdown.outOfStock,
-          tone: 'danger',
-          icon: '🚫',
-        },
-        { key: 'totalSuppliers', label: 'Total Suppliers', value: summary?.totalSuppliers, icon: '🚚' },
-        { key: 'totalCategories', label: 'Total Categories', value: summary?.totalCategories, icon: '🗂️' },
-        {
-          key: 'activeAlerts',
-          label: 'Active Alerts',
-          value: summary?.activeAlertsCount,
-          tone: summary?.activeAlertsCount > 0 ? 'warning' : 'default',
-          icon: '🔔',
-        },
-        {
-          key: 'stockValue',
-          label: 'Total Stock Value',
-          value: formatCurrency(summary?.totalStockValue),
-          tone: 'success',
-          icon: '💰',
-        },
-      ].filter(Boolean);
+        <KpiGroup key="i" title="Inventory" columns={6} items={inventoryItems} />,
+        <KpiGroup key="b" title="Business" columns={3} items={businessItems} />,
+      ];
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>
-            {timeGreeting()}, {user?.name} <span aria-hidden="true">👋</span>
-          </h1>
-          <p className="page-subtitle">
-            Here's what's happening with your inventory today. ({roleLabel(user?.role)})
-          </p>
+          <h1>Dashboard</h1>
+          <p className="page-subtitle">Stock levels, sales and purchases at a glance.</p>
+          <span className="page-meta">
+            <CalendarDays {...ICON_SM} />
+            {todayLabel}
+          </span>
         </div>
-        {/* PHASE 5: quick-action shortcuts to the pages people reach for
-            right after checking their stats - pure navigation, no new
-            data or modals wired up here. */}
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <Link to="/products" className="btn-secondary" style={{ textDecoration: 'none' }}>
-            + Add Product
-          </Link>
-          <Link to="/sales" className="btn-secondary" style={{ textDecoration: 'none' }}>
-            🛒 New Sale
+
+        {/* Shortcuts to existing pages. The Add Product / New Purchase forms
+            open on arrival (?new=1); both are Admin + Manager only, matching
+            the permissions on those pages. */}
+        <div className="page-actions">
+          <Link to="/sales" className="btn-primary">
+            <ShoppingCart {...ICON_SM} />
+            New sale
           </Link>
           {(isAdmin || isManager) && (
-            <Link to="/purchases" className="btn-secondary" style={{ textDecoration: 'none' }}>
-              🧾 New Purchase
+            <Link to="/products?new=1" className="btn-secondary">
+              <Plus {...ICON_SM} />
+              Add product
             </Link>
           )}
-          {isManager && (
-            <Link to="/admin/reports" className="btn-primary" style={{ textDecoration: 'none' }}>
-              View Reports
+          {(isAdmin || isManager) && (
+            <Link to="/purchases?new=1" className="btn-secondary">
+              <ShoppingBag {...ICON_SM} />
+              New purchase
             </Link>
           )}
         </div>
       </div>
 
-      {error && <p className="banner banner-error">{error}</p>}
-
-      {!summary ? (
-        <Loader label="Loading dashboard..." />
-      ) : (
-        <>
-          <div className="stats-grid">
-            {statCards.map((card, index) => (
-              <StatCard
-                key={card.key}
-                index={index}
-                label={card.label}
-                value={card.value}
-                tone={card.tone}
-                icon={card.icon}
-              />
-            ))}
-          </div>
-
-          {salesAnalytics && (
-            <div style={{ marginTop: '1rem' }}>
-              <SalesOverviewChart daily={salesAnalytics.daily} />
-            </div>
-          )}
-
-          <div style={{ marginTop: '1rem' }}>
-            <StockChart
-              stockStatusBreakdown={summary.stockStatusBreakdown}
-              categoryBreakdown={summary.categoryBreakdown}
-            />
-          </div>
-
-          <motion.div
-            className="chart-card"
-            style={{ marginTop: '1rem' }}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-          >
-            <h3>Recent Activity</h3>
-            <RecentActivity activities={summary.recentActivities} />
-          </motion.div>
-        </>
+      {summary.error && !summary.loading && (
+        <div className="panel" style={{ marginBottom: '1rem' }}>
+          <PanelError message={summary.error} onRetry={summary.reload} />
+        </div>
       )}
+
+      {groups}
+
+      <div className="dash-grid">
+        <div className="dash-stack">
+          <SalesOverviewChart
+            daily={sales.data?.daily}
+            loading={sales.loading}
+            error={sales.error}
+            onRetry={sales.reload}
+          />
+          <RecentTransactions
+            rows={transactions.data || []}
+            loading={transactions.loading}
+            error={transactions.error}
+            onRetry={transactions.reload}
+            canCreateSale
+          />
+        </div>
+
+        <div className="dash-stack">
+          <LowStockTable
+            products={lowStock.data?.products || []}
+            totalCount={lowStock.data?.total || 0}
+            loading={lowStock.loading}
+            error={lowStock.error}
+            onRetry={lowStock.reload}
+          />
+          <section className="panel" aria-label="Recent activity">
+            <div className="panel-header">
+              <h2 className="panel-title">Recent activity</h2>
+              {isAdmin && (
+                <Link to="/admin/activity-logs" className="panel-link">
+                  View all
+                </Link>
+              )}
+            </div>
+            {s ? <RecentActivity activities={s.recentActivities} /> : summary.loading ? <PanelLoading rows={4} /> : null}
+          </section>
+        </div>
+      </div>
+
+      {s && <StockChart stockStatusBreakdown={s.stockStatusBreakdown} categoryBreakdown={s.categoryBreakdown} />}
     </div>
   );
 }
 
 export default Dashboard;
-

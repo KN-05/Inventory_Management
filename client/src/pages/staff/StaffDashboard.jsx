@@ -19,7 +19,6 @@
 // and the simpler set of cards make it feel distinct.
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { roleLabel } from '../../utils/roleLabel';
@@ -86,16 +85,12 @@ function StaffDashboard() {
             categoryBreakdown={summary.categoryBreakdown}
           />
 
-          <motion.div
-            className="chart-card"
-            style={{ marginTop: '1rem' }}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-          >
-            <h3>Recent Activity</h3>
+          <section className="panel" style={{ marginTop: '1rem' }} aria-label="Recent activity">
+            <div className="panel-header">
+              <h2 className="panel-title">Recent activity</h2>
+            </div>
             <RecentActivity activities={summary.recentActivities} />
-          </motion.div>
+          </section>
         </>
       )}
     </div>

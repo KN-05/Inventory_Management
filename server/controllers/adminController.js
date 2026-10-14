@@ -21,7 +21,14 @@ const Supplier = require('../models/Supplier');
 
 // @desc   Get all users
 // @route  GET /api/admin/users
-// @access Private (Admin only)
+// @access Private (Admin + Manager)
+//
+// PHASE 34: Manager can now view this list too (previously Admin-only),
+// so they can activate/deactivate Staff accounts without needing an
+// Admin for routine status changes. Manager still cannot create users,
+// change roles, reset passwords here, or delete anyone - see the
+// per-route authorize() calls in adminRoutes.js for exactly what each
+// role can do.
 const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find().sort({ createdAt: -1 });
   res.status(200).json({ success: true, count: users.length, users });
@@ -88,6 +95,9 @@ const createUser = asyncHandler(async (req, res) => {
 // @route  PATCH /api/admin/users/:id/status
 // @access Private (Admin only)
 // @body   { isActive: boolean }
+// PHASE 34: Manager can call this too now (route allows admin+manager),
+// but a Manager may only activate/deactivate Staff and other Managers -
+// never an Admin account, so a Manager can never lock an Admin out.
 const updateUserStatus = asyncHandler(async (req, res) => {
   const { isActive } = req.body;
 
@@ -100,6 +110,11 @@ const updateUserStatus = asyncHandler(async (req, res) => {
   if (!user) {
     res.status(404);
     throw new Error('User not found');
+  }
+
+  if (req.user.role === 'manager' && user.role === 'admin') {
+    res.status(403);
+    throw new Error('Managers cannot change an Admin account\'s status');
   }
 
   user.isActive = !!isActive;
@@ -147,6 +162,42 @@ const updateUserRole = asyncHandler(async (req, res) => {
   await logActivity(req.user._id, `Changed "${user.name}"'s role to ${role}`, 'user');
 
   res.status(200).json({ success: true, message: 'User role updated', user });
+});
+
+// @desc   Permanently delete a user account
+// @route  DELETE /api/admin/users/:id
+// @access Private (Admin only)
+//
+// PHASE 34: new - previously there was no way to remove a user account
+// at all, only deactivate it. Deliberately Admin-only (not Manager) per
+// the spec: Manager can deactivate/activate, but only Admin can delete.
+// Blocks deleting yourself and blocks deleting the last remaining Admin,
+// so the system can never be left with zero Admins able to log in.
+const deleteUser = asyncHandler(async (req, res) => {
+  if (req.params.id === String(req.user._id)) {
+    res.status(400);
+    throw new Error('You cannot delete your own account');
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  if (user.role === 'admin') {
+    const adminCount = await User.countDocuments({ role: 'admin' });
+    if (adminCount <= 1) {
+      res.status(400);
+      throw new Error('Cannot delete the last remaining Admin account');
+    }
+  }
+
+  await user.deleteOne();
+
+  await logActivity(req.user._id, `Deleted user "${user.name}" (${user.email})`, 'user');
+
+  res.status(200).json({ success: true, message: 'User deleted' });
 });
 
 // @desc   Admin directly sets a NEW password for any user - no OTP step,
@@ -426,6 +477,7 @@ module.exports = {
   createUser,
   updateUserStatus,
   updateUserRole,
+  deleteUser,
   adminResetPassword,
   requestStaffPasswordResetOtp,
   resetStaffPasswordWithOtp,

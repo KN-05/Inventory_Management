@@ -10,8 +10,14 @@
 // Purchase, or by the manual increase/decrease-stock actions), this shows
 // them so anyone can see WHY the current quantity is what it is. Sales
 // history will be added here once the Sales phase exists.
+//
+// PHASE 31: renders the barcode value as an actual scannable barcode
+// image (CODE128, via jsbarcode) instead of just the raw digits - so a
+// label/receipt can be printed straight off this screen, or the barcode
+// can be re-scanned by pointing another device's camera/scanner at it.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import JsBarcode from 'jsbarcode';
 import AnimatedModal from '../common/AnimatedModal';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
@@ -41,6 +47,40 @@ function DetailItem({ label, value, full }) {
     <div className={full ? 'detail-grid-full' : undefined}>
       <div className="detail-item-label">{label}</div>
       <div className="detail-item-value">{value}</div>
+    </div>
+  );
+}
+
+// PHASE 31: renders `value` as a CODE128 barcode into an <svg>. Kept as
+// its own small component so the render effect only re-runs when the
+// barcode value itself changes, not on every ProductDetailsModal render.
+function BarcodeImage({ value }) {
+  const svgRef = useRef(null);
+  const [renderError, setRenderError] = useState('');
+
+  useEffect(() => {
+    if (!value || !svgRef.current) return;
+    try {
+      JsBarcode(svgRef.current, value, {
+        format: 'CODE128',
+        width: 2,
+        height: 56,
+        displayValue: true,
+        fontSize: 13,
+        margin: 8,
+      });
+      setRenderError('');
+    } catch {
+      setRenderError('Could not render barcode image for this value.');
+    }
+  }, [value]);
+
+  if (!value) return null;
+
+  return (
+    <div className="barcode-image-wrap" style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+      <svg ref={svgRef} />
+      {renderError && <p className="form-error">{renderError}</p>}
     </div>
   );
 }
@@ -92,6 +132,9 @@ function ProductDetailsModal({ open, product, onClose }) {
         <DetailItem label="Price" value={formatCurrency(product.price)} />
         <DetailItem label="Status" value={<span className={statusClass[product.status] || 'badge'}>{product.status}</span>} />
       </div>
+
+      {/* PHASE 31: scannable barcode image, printable straight off this screen */}
+      <BarcodeImage value={product.barcode} />
 
       <h3 style={{ marginTop: '1.25rem', marginBottom: '0.5rem' }}>Stock History</h3>
       {movementsError && <p className="form-error">{movementsError}</p>}

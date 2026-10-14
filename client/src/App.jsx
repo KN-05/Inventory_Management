@@ -1,6 +1,7 @@
 // src/App.jsx
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -25,12 +26,15 @@ import UserManagement from './pages/admin/UserManagement';
 import StaffPasswords from './pages/admin/StaffPasswords';
 import Reports from './pages/admin/Reports';
 import Analytics from './pages/admin/Analytics';
+import AIInsights from './pages/admin/AIInsights';
 import ActivityLogs from './pages/admin/ActivityLogs';
 import Settings from './pages/admin/Settings';
 import Profile from './pages/Profile';
+import Attendance from './pages/Attendance';
 
 function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
@@ -89,11 +93,19 @@ function App() {
               <Route path="/sales" element={<Sales />} />
               <Route path="/profile" element={<Profile />} />
 
-              {/* Admin-only route */}
+              {/* PHASE 34: Attendance - all three roles open this same page, but
+                  each sees a different experience (Staff: own check-in/history,
+                  Manager: own + team with edit, Admin: team, view only). The
+                  backend enforces the real permissions per endpoint. */}
+              <Route path="/attendance" element={<Attendance />} />
+
+              {/* PHASE 34: Admin + Manager. Admin gets full control (create,
+                  roles, delete, reset password); Manager can only view the
+                  list and activate/deactivate - see UserManagement.jsx. */}
               <Route
                 path="/admin/users"
                 element={
-                  <RoleRoute allowedRoles={['admin']}>
+                  <RoleRoute allowedRoles={['admin', 'manager']}>
                     <UserManagement />
                   </RoleRoute>
                 }
@@ -134,6 +146,18 @@ function App() {
                 }
               />
 
+              {/* PHASE 28/29: AI Insights - same Admin + Manager access as
+                  Analytics (reorder suggestions, demand forecast, anomaly
+                  detection, and the rule-based assistant). */}
+              <Route
+                path="/admin/ai-insights"
+                element={
+                  <RoleRoute allowedRoles={['admin', 'manager']}>
+                    <AIInsights />
+                  </RoleRoute>
+                }
+              />
+
               {/* PHASE 3: Admin-only Activity Logs + Settings */}
               <Route
                 path="/admin/activity-logs"
@@ -161,6 +185,7 @@ function App() {
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
+    </MotionConfig>
   );
 }
 

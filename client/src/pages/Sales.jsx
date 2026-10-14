@@ -38,6 +38,8 @@ import Button from '../components/common/Button';
 import BarcodeScannerModal from '../components/common/BarcodeScannerModal';
 import PageHeader from '../components/common/PageHeader';
 import { formatCurrency } from '../utils/formatCurrency';
+import { ReceiptText, ScanBarcode, Search, ShoppingCart } from 'lucide-react';
+import { ICON_SM } from '../utils/iconProps';
 
 // PHASE 32: ignore the same scanned code if it comes in again within
 // this window - prevents one barcode held in front of the camera from
@@ -263,14 +265,14 @@ function Sales() {
           className={`pos-tab${tab === 'new' ? ' pos-tab-active' : ''}`}
           onClick={() => setTab('new')}
         >
-          🛒 New Sale
+          <ShoppingCart {...ICON_SM} /> New Sale
         </button>
         <button
           type="button"
           className={`pos-tab${tab === 'history' ? ' pos-tab-active' : ''}`}
           onClick={() => setTab('history')}
         >
-          🧾 Sales History
+          <ReceiptText {...ICON_SM} /> Sales History
         </button>
       </div>
 
@@ -306,7 +308,7 @@ function Sales() {
                 + Add to Cart
               </Button>
               <Button variant="secondary" type="button" onClick={() => setScannerOpen(true)}>
-                📷 Scan
+                <ScanBarcode {...ICON_SM} /> Scan
               </Button>
             </div>
           </div>
@@ -316,7 +318,7 @@ function Sales() {
               Cart {cart.length > 0 && <span className="pos-cart-count">{cart.length}</span>}
             </h3>
             {cart.length === 0 ? (
-              <p className="empty-state">🛒 Cart is empty. Search or select a product above to start a sale.</p>
+              <p className="empty-state">Cart is empty. Search, scan or select a product above to start a sale.</p>
             ) : (
               <table className="data-table">
                 <thead>
@@ -453,8 +455,8 @@ function Sales() {
           <div className="filters-bar" style={{ marginBottom: '1rem' }}>
             <div className="filters-search-wrap">
               <span className="filters-search-icon" aria-hidden="true">
-                🔍
-              </span>
+            <Search {...ICON_SM} />
+          </span>
               <input
                 type="text"
                 placeholder="Search by invoice number..."

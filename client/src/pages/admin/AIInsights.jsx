@@ -10,7 +10,6 @@
 // of intents (it can never run an arbitrary query).
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -30,6 +29,8 @@ import {
 import { formatCurrency } from '../../utils/formatCurrency';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+import { ArrowDown, ArrowUp, MessageSquare, Minus, Package, TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react';
+import { ICON_SM } from '../../utils/iconProps';
 
 const riskBadge = {
   CRITICAL: 'badge badge-red',
@@ -39,10 +40,10 @@ const riskBadge = {
 };
 
 const TABS = [
-  { id: 'reorder', label: '📦 Reorder & Stock Risk' },
-  { id: 'forecast', label: '📈 Demand Forecast' },
-  { id: 'anomalies', label: '🚨 Anomaly Detection' },
-  { id: 'assistant', label: '🧠 Assistant' },
+  { id: 'reorder', label: 'Reorder & Stock Risk', icon: Package },
+  { id: 'forecast', label: 'Demand Forecast', icon: TrendingUp },
+  { id: 'anomalies', label: 'Anomaly Detection', icon: TriangleAlert },
+  { id: 'assistant', label: 'Assistant', icon: MessageSquare },
 ];
 
 const SUGGESTED_QUESTIONS = [
@@ -93,6 +94,7 @@ function AIInsights() {
             className={`pos-tab${tab === t.id ? ' pos-tab-active' : ''}`}
             onClick={() => setTab(t.id)}
           >
+            <t.icon {...ICON_SM} />
             {t.label}
           </button>
         ))}
@@ -141,12 +143,9 @@ function ReorderTab({ data }) {
             </tr>
           </thead>
           <tbody>
-            {data.suggestions.map((s, index) => (
-              <motion.tr
+            {data.suggestions.map((s) => (
+              <tr
                 key={s.productId}
-                initial={{ opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2, delay: Math.min(index, 10) * 0.03 }}
               >
                 <td>{s.name}</td>
                 <td className="cell-mono">{s.sku}</td>
@@ -158,7 +157,7 @@ function ReorderTab({ data }) {
                 <td>
                   <span className={riskBadge[s.riskLevel]}>{s.riskLevel}</span>
                 </td>
-              </motion.tr>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -182,15 +181,19 @@ function ForecastTab({ data }) {
     ...data.forecast.map((f) => ({ date: f.date.slice(5), forecast: f.forecastRevenue })),
   ];
 
-  const trendIcon = data.trend === 'up' ? '📈' : data.trend === 'down' ? '📉' : '➡️';
+  const TrendIcon = data.trend === 'up' ? TrendingUp : data.trend === 'down' ? TrendingDown : Minus;
 
   return (
     <div className="chart-card">
       <h3>Sales Demand Forecast</h3>
       <div className="stats-grid" style={{ marginBottom: '1rem' }}>
         <div className="stat-card">
-          <span className="stat-card-icon">{trendIcon}</span>
-          <p className="stat-card-label">14-Day Trend</p>
+          <div className="stat-card-head">
+            <p className="stat-card-label">14-day trend</p>
+            <span className="stat-card-icon">
+              <TrendIcon {...ICON_SM} />
+            </span>
+          </div>
           <p className="stat-card-value">
             {data.trend === 'up' ? '+' : ''}
             {data.trendPercent}%
@@ -263,8 +266,12 @@ function AnomaliesTab({ data }) {
                   <td className="cell-numeric">{formatCurrency(a.revenue)}</td>
                   <td className="cell-numeric">{formatCurrency(a.averageRevenue)}</td>
                   <td>
-                    <span className={a.type === 'spike' ? 'badge badge-green' : 'badge badge-red'}>
-                      {a.type === 'spike' ? '▲ Spike' : '▼ Drop'}
+                    <span
+                      className={a.type === 'spike' ? 'badge badge-green' : 'badge badge-red'}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      {a.type === 'spike' ? <ArrowUp size={12} strokeWidth={2} /> : <ArrowDown size={12} strokeWidth={2} />}
+                      {a.type === 'spike' ? 'Spike' : 'Drop'}
                     </span>
                   </td>
                 </tr>
@@ -360,9 +367,9 @@ function AssistantTab() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
         {history.map((h, i) => (
           <div key={i}>
-            <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>🙋 {h.question}</p>
+            <p style={{ fontWeight: 600, marginBottom: '0.35rem' }}>{h.question}</p>
             <p className="page-subtitle" style={{ marginBottom: h.products || h.topProducts ? '0.5rem' : 0 }}>
-              🧠 {h.reply}
+              {h.reply}
             </p>
 
             {h.products && h.products.length > 0 && (

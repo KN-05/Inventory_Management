@@ -16,7 +16,6 @@
 // page), so no need for two different UIs there.
 
 import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { useToast } from '../../context/useToast';
 import { getStaffList, requestStaffPasswordResetOtp, resetStaffPasswordWithOtp } from '../../api/admin';
 import Loader from '../../components/common/Loader';
@@ -121,12 +120,9 @@ function StaffPasswords() {
             </tr>
           </thead>
           <tbody>
-            {staff.map((s, index) => (
-              <motion.tr
+            {staff.map((s) => (
+              <tr
                 key={s._id}
-                initial={{ opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
               >
                 <td>
                   <span className="cell-with-avatar">
@@ -145,7 +141,7 @@ function StaffPasswords() {
                     Reset Password
                   </button>
                 </td>
-              </motion.tr>
+              </tr>
             ))}
           </tbody>
         </table>

@@ -13,35 +13,20 @@
 // how each row is rendered changed.
 
 import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { getActivityLogs } from '../../api/activityLogs';
 import { roleLabel } from '../../utils/roleLabel';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import PageHeader from '../../components/common/PageHeader';
 import Card from '../../components/common/Card';
+import ModuleIcon from '../../components/common/ModuleIcon';
 
 // PHASE 11 FIX: this list was missing 'purchase', 'sale', and 'customer' -
 // those log entries have existed in the database since Phases 7/8 (the
 // backend's ActivityLog module enum already includes them), but Admin
 // had no way to filter down to just them here. Kept in sync with
 // server/models/ActivityLog.js's enum.
-const MODULES = ['product', 'supplier', 'category', 'stock', 'purchase', 'sale', 'customer', 'user', 'auth', 'other'];
-
-// Same icon-per-module mapping as components/dashboard/RecentActivity.jsx,
-// kept in sync by hand since it's a tiny const map, not worth importing
-// across an admin-page/dashboard-widget boundary for.
-const MODULE_ICONS = {
-  product: '📦',
-  category: '🗂️',
-  supplier: '🚚',
-  purchase: '🧾',
-  sale: '💰',
-  customer: '🙍',
-  stock: '📉',
-  user: '👤',
-  auth: '🔐',
-};
+const MODULES = ['product', 'supplier', 'category', 'stock', 'purchase', 'sale', 'customer', 'attendance', 'user', 'auth', 'other'];
 
 function timeAgo(dateString) {
   const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
@@ -115,16 +100,13 @@ function ActivityLogs() {
       ) : (
         <Card>
           <ul className="activity-list">
-            {logs.map((log, index) => (
-              <motion.li
+            {logs.map((log) => (
+              <li
                 key={log._id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 12) * 0.02 }}
               >
                 <span className="activity-text">
                   <span className="activity-icon" aria-hidden="true">
-                    {MODULE_ICONS[log.module] || '•'}
+                    <ModuleIcon module={log.module} />
                   </span>
                   <strong>{log.user?.name || 'Unknown user'}</strong>
                   {log.user && (
@@ -136,7 +118,7 @@ function ActivityLogs() {
                   {log.action}
                 </span>
                 <span className="activity-time">{timeAgo(log.createdAt)}</span>
-              </motion.li>
+              </li>
             ))}
           </ul>
 

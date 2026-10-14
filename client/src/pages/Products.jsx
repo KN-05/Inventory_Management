@@ -1,6 +1,6 @@
 // src/pages/Products.jsx
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
@@ -26,6 +26,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
 import PasswordConfirmModal from '../components/common/PasswordConfirmModal';
+import PageHeader from '../components/common/PageHeader';
 
 function Products() {
   const { isAdmin, isManager } = useAuth();
@@ -49,11 +50,14 @@ function Products() {
   // via the Navbar's global search (see components/layout/Navbar.jsx) -
   // read once on mount, same as any deep link; the input stays fully
   // editable afterwards like before.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [category, setCategory] = useState('');
   const [supplier, setSupplier] = useState('');
   const [status, setStatus] = useState('');
+  // PHASE 6: client-side sort only - re-orders the already-fetched
+  // `products` array below (see `sortedProducts`), no extra API call.
+  const [sort, setSort] = useState('');
 
   // Modal state
   const [formOpen, setFormOpen] = useState(false);
@@ -101,11 +105,41 @@ function Products() {
     loadProducts();
   }, [loadProducts]);
 
+  // PHASE 6: client-side sort of whatever `products` the filters above
+  // already fetched - doesn't touch the API/search/filter logic at all.
+  const sortedProducts = useMemo(() => {
+    if (!sort) return products;
+    const [field, direction] = sort.split('-');
+    const multiplier = direction === 'desc' ? -1 : 1;
+    return [...products].sort((a, b) => {
+      if (field === 'name') return a.name.localeCompare(b.name) * multiplier;
+      if (field === 'price') return (a.price - b.price) * multiplier;
+      if (field === 'quantity') return (a.quantity - b.quantity) * multiplier;
+      return 0;
+    });
+  }, [products, sort]);
+
   const openAddForm = () => {
     setEditingProduct(null);
     setFormError('');
     setFormOpen(true);
   };
+
+  // Dashboard quick action: /products?new=1 opens the Add Product form once
+  // (Admin/Manager only - same rule as the "+ Add Product" button), then
+  // removes the flag so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    if (canManage) {
+      setEditingProduct(null);
+      setFormError('');
+      setFormOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openEditForm = (product) => {
     setEditingProduct(product);
@@ -202,27 +236,30 @@ function Products() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>Products</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button variant="secondary" onClick={handleExport}>
-            Export CSV
-          </Button>
-          {/* PHASE 25: Import CSV was already Admin/Manager-only here.
-              "+ Add Product" now matches it - previously shown to every
-              role, even though the backend has always rejected Staff. */}
-          {canManage && (
-            <Button variant="secondary" onClick={() => setImportOpen(true)}>
-              Import CSV
+      <PageHeader
+        title="Products"
+        subtitle="Your full inventory catalog"
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleExport}>
+              Export CSV
             </Button>
-          )}
-          {canManage && (
-            <Button variant="primary" onClick={openAddForm}>
-              + Add Product
-            </Button>
-          )}
-        </div>
-      </div>
+            {/* PHASE 25: Import CSV was already Admin/Manager-only here.
+                "+ Add Product" now matches it - previously shown to every
+                role, even though the backend has always rejected Staff. */}
+            {canManage && (
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                Import CSV
+              </Button>
+            )}
+            {canManage && (
+              <Button variant="primary" onClick={openAddForm}>
+                + Add Product
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
@@ -235,6 +272,8 @@ function Products() {
         onSupplierChange={setSupplier}
         status={status}
         onStatusChange={setStatus}
+        sort={sort}
+        onSortChange={setSort}
         categories={categories}
         suppliers={suppliers}
       />
@@ -243,7 +282,7 @@ function Products() {
         <Loader label="Loading products..." />
       ) : (
         <ProductTable
-          products={products}
+          products={sortedProducts}
           canManage={canManage}
           onEdit={openEditForm}
           onDelete={confirmDelete}

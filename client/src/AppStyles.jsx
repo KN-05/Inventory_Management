@@ -53,13 +53,13 @@ const CSS = `
   --color-primary: #4f46e5;
   --color-primary-hover: #4338ca;
   --color-primary-bg: #eef2ff;
-  --color-primary-gradient: linear-gradient(90deg, #4f46e5, #6366f1);
+  --color-primary-gradient: #4f46e5;
 
-  --color-success: #16a34a;
+  --color-success: #15803d;
   --color-success-bg: #f0fdf4;
   --color-success-border: #bbf7d0;
 
-  --color-warning: #d97706;
+  --color-warning: #b45309;
   --color-warning-bg: #fffbeb;
   --color-warning-border: #fde68a;
 
@@ -71,7 +71,7 @@ const CSS = `
   --sidebar-bg-active: rgba(255, 255, 255, 0.08);
   --sidebar-text: #94a3b8;
   --sidebar-text-active: #ffffff;
-  --sidebar-section-label: #64748b;
+  --sidebar-section-label: #8794a8;
   --sidebar-accent: #818cf8;
 
   /* Kept the same variable names every card/table/button/input already
@@ -86,8 +86,8 @@ const CSS = `
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
 
   /* Layout */
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius: 8px;
+  --radius-sm: 6px;
   --sidebar-width: 240px;
   --navbar-height: 60px;
 
@@ -139,17 +139,45 @@ const CSS = `
    defined now and will apply automatically the moment that role exists,
    with zero extra frontend work needed. */
 
-/* All three roles share the same professional indigo-on-navy palette -
-   only the active nav link's accent bar changes per role. */
+/* Each role keeps its own colour identity (set via data-theme on
+   .app-shell in DashboardLayout.jsx) so it's clear which panel you're in,
+   but kept restrained: solid sidebar colours, no gradients, and primary
+   colours dark enough for white button text to stay readable (WCAG AA).
+     Admin   - indigo   on deep navy
+     Manager - teal     on deep green-grey
+     Staff   - amber    on warm charcoal
+   Only brand/sidebar tokens change per role - spacing, typography, cards,
+   tables and the success/warning/danger colours are identical. */
 .app-shell[data-theme='admin'] {
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-bg: #eef2ff;
+  --color-primary-gradient: #4f46e5;
+  --sidebar-gradient: #0f172a;
+  --sidebar-text: #a3b0c4;
+  --sidebar-section-label: #8794a8;
   --sidebar-accent: #818cf8;
 }
 
 .app-shell[data-theme='manager'] {
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-primary-bg: #f0fdfa;
+  --color-primary-gradient: #0f766e;
+  --sidebar-gradient: #102a2a;
+  --sidebar-text: #9db8b6;
+  --sidebar-section-label: #86a3a1;
   --sidebar-accent: #2dd4bf;
 }
 
 .app-shell[data-theme='staff'] {
+  --color-primary: #b45309;
+  --color-primary-hover: #92400e;
+  --color-primary-bg: #fffbeb;
+  --color-primary-gradient: #b45309;
+  --sidebar-gradient: #1c1917;
+  --sidebar-text: #b5aca3;
+  --sidebar-section-label: #9a9087;
   --sidebar-accent: #fbbf24;
 }
 
@@ -199,16 +227,6 @@ a:focus-visible {
   justify-content: center;
   padding: 1rem;
   background: var(--color-bg);
-  background-image: radial-gradient(
-      circle at 15% 15%,
-      color-mix(in srgb, var(--color-primary) 10%, transparent),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 85% 85%,
-      color-mix(in srgb, var(--color-primary) 8%, transparent),
-      transparent 40%
-    );
 }
 
 /* PHASE 14 (login redesign): split-screen layout - form on the left,
@@ -411,15 +429,22 @@ a:focus-visible {
   text-decoration: underline;
 }
 
+/* Each label + input pair sits in its own wrapper <div> (for the staggered
+   entrance), so the label must be a block and the input full width -
+   otherwise they line up side by side at different widths. */
 .auth-form label {
+  display: block;
   font-size: 0.85rem;
   font-weight: 600;
   margin-top: 0.75rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
 }
 
 .auth-form input,
 .auth-form select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.55rem 0.65rem;
   border: none;
   border-radius: var(--radius-sm);
@@ -506,9 +531,7 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: #f8fafc;
-  background-image: radial-gradient(circle at 12% 8%, #e0e7ff 0%, transparent 45%),
-    radial-gradient(circle at 88% 92%, #e0e7ff 0%, transparent 45%);
+  background: #f1f5f9;
 }
 
 .login-shell {
@@ -552,8 +575,7 @@ a:focus-visible {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+  background: #4f46e5;
 }
 
 .login-brand-text {
@@ -691,20 +713,18 @@ a:focus-visible {
 }
 
 .login-submit-btn {
-  padding: 0.8rem;
+  padding: 0.75rem;
   border: none;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  border-radius: 8px;
+  background: #4f46e5;
   color: #fff;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  box-shadow: 0 10px 20px -6px rgba(79, 70, 229, 0.45);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 
 .login-submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.55);
+  background: #4338ca;
 }
 
 .login-submit-btn:active:not(:disabled) {
@@ -738,7 +758,7 @@ a:focus-visible {
 .login-illustration-side {
   flex: 1 1 50%;
   position: relative;
-  background: linear-gradient(160deg, #4f46e5 0%, #1e1b4b 100%);
+  background: #0f172a;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -746,34 +766,6 @@ a:focus-visible {
   gap: 1.75rem;
   padding: 2.5rem;
   overflow: hidden;
-}
-
-/* Soft decorative glow blobs, purely visual - echo the landing page's
-   auth-floating-shape treatment so the login page feels part of the
-   same brand, not a one-off design. */
-.login-illustration-side::before,
-.login-illustration-side::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(40px);
-  pointer-events: none;
-}
-
-.login-illustration-side::before {
-  width: 220px;
-  height: 220px;
-  background: rgba(129, 140, 248, 0.35);
-  top: -60px;
-  right: -60px;
-}
-
-.login-illustration-side::after {
-  width: 180px;
-  height: 180px;
-  background: rgba(99, 102, 241, 0.3);
-  bottom: -50px;
-  left: -50px;
 }
 
 /* Clean, no-fake-data brand panel: an icon badge, headline copy, and a
@@ -788,7 +780,6 @@ a:focus-visible {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.05), 0 12px 30px rgba(15, 23, 42, 0.25);
   position: relative;
   z-index: 1;
 }
@@ -819,7 +810,6 @@ a:focus-visible {
   border: 1px solid rgba(255, 255, 255, 0.22);
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
-  backdrop-filter: blur(6px);
 }
 
 .login-illustration-title {
@@ -1010,6 +1000,7 @@ a:focus-visible {
   opacity: 0.35;
   pointer-events: none;
   z-index: 0;
+  display: none; /* decorative only - removed for a plainer, more operational look */
 }
 
 .landing-blob-1 {
@@ -1139,8 +1130,8 @@ a:focus-visible {
   background: #ffffff;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 30px 60px -20px rgba(49, 46, 129, 0.35), 0 2px 8px rgba(15, 23, 42, 0.06);
-  transform: rotate(-1.5deg);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transform: none;
   border: 1px solid var(--color-border);
 }
 
@@ -1350,7 +1341,8 @@ a:focus-visible {
 }
 
 .landing-capability-icon {
-  font-size: 1rem;
+  display: inline-flex;
+  color: var(--color-primary);
 }
 
 /* ---------------- Features ---------------- */
@@ -1385,7 +1377,7 @@ a:focus-visible {
 
 .landing-feature-icon {
   display: inline-flex;
-  font-size: 1.5rem;
+  color: var(--color-primary);
   margin-bottom: 0.75rem;
 }
 
@@ -1441,9 +1433,9 @@ a:focus-visible {
   justify-content: center;
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--color-primary-bg);
-  font-size: 1.5rem;
+  color: var(--color-primary);
   margin-bottom: 0.9rem;
 }
 
@@ -1517,7 +1509,7 @@ a:focus-visible {
 
 .landing-persona-icon {
   display: inline-flex;
-  font-size: 1.9rem;
+  color: var(--color-primary);
   margin-bottom: 0.6rem;
 }
 
@@ -1788,8 +1780,12 @@ a:focus-visible {
   display: inline-flex;
   width: 18px;
   justify-content: center;
-  font-size: 0.9rem;
   flex-shrink: 0;
+}
+
+.sidebar-link-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .sidebar-link-text {
@@ -1808,12 +1804,11 @@ a:focus-visible {
   right: -12px;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: 6px;
   background: var(--color-surface);
   box-shadow: var(--neu-shadow);
   border: none;
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1929,9 +1924,12 @@ a:focus-visible {
 }
 
 .sidebar-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: none;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
@@ -1992,15 +1990,16 @@ a:focus-visible {
   gap: 0.5rem;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
-  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.7rem;
   max-width: 320px;
   width: 100%;
 }
 
 .navbar-search-icon {
-  font-size: 0.85rem;
-  opacity: 0.6;
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
 }
 
 .navbar-search input {
@@ -2069,7 +2068,7 @@ a:focus-visible {
 }
 
 .navbar-profile-chevron {
-  font-size: 0.65rem;
+  display: inline-flex;
   color: var(--color-text-muted);
   margin-left: 0.1rem;
 }
@@ -2156,10 +2155,10 @@ a:focus-visible {
   background: var(--color-surface);
   box-shadow: var(--neu-shadow);
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius);
   width: 36px;
   height: 36px;
-  font-size: 1rem;
+  color: var(--color-text-secondary);
   position: relative;
   display: flex;
   align-items: center;
@@ -2477,9 +2476,9 @@ a:focus-visible {
 
 .page-header h1 {
   margin: 0;
-  font-size: 1.55rem;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .page-subtitle {
@@ -2494,11 +2493,46 @@ a:focus-visible {
 .btn-primary,
 .btn-secondary,
 .btn-danger {
-  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
   border-radius: var(--radius-sm);
-  border: none;
-  font-size: 0.88rem;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
 }
 
 .btn-primary {
@@ -2515,12 +2549,6 @@ a:focus-visible {
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--color-bg);
-}
-
-.btn-danger {
-  background: linear-gradient(90deg, #e11d48, #f43f5e);
-  color: #fff;
-  box-shadow: 0 3px 10px rgba(225, 29, 72, 0.3);
 }
 
 button:disabled {
@@ -2681,8 +2709,10 @@ button:disabled {
 .filters-search-icon {
   position: absolute;
   left: 0.7rem;
-  font-size: 0.8rem;
-  opacity: 0.55;
+  top: 50%;
+  display: inline-flex;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
   pointer-events: none;
 }
 
@@ -2700,6 +2730,9 @@ button:disabled {
 }
 
 .pos-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   border: none;
   background: none;
   padding: 0.5rem 1.1rem;
@@ -3094,81 +3127,54 @@ button:disabled {
 .stat-card {
   background: var(--color-surface);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 0.85rem 1rem;
   box-shadow: var(--neu-shadow);
-  /* BUGFIX: a large formatted value (e.g. "₹1,43,15,000.00") was
-     overflowing past the card's edge instead of staying inside it -
-     \`overflow: hidden\` is a safety net, and the value itself now
-     shrinks/wraps gracefully (see .stat-card-value below) so numbers
-     stay readable instead of being clipped. */
   overflow: hidden;
   min-width: 0;
 }
 
-.stat-card:hover {
-  box-shadow: var(--neu-shadow-lg);
-}
-
-.stat-card-icon {
-  display: inline-flex;
+.stat-card-head {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  font-size: 1.1rem;
-  background: var(--color-primary-bg);
-  margin-bottom: 0.6rem;
-}
-
-.stat-card-icon-warning {
-  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
-}
-
-.stat-card-icon-danger {
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-}
-
-.stat-card-icon-success {
-  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .stat-card-label {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
+  margin: 0;
+  font-size: 0.8rem;
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.stat-card-value {
-  margin: 0;
-  font-family: var(--font-mono);
-  /* FIX: large currency values like "₹37,40,000.00" were wrapping onto a
-     second line inside the card, making the row look uneven - lowered
-     the max size (was 1.5rem) so long amounts fit on one line at normal
-     card widths; clamp() still scales it down further on narrow/mobile
-     cards, and overflow-wrap below is the safety net if it ever still
-     needs to wrap on a very small screen, rather than forcing nowrap and
-     risking the value getting clipped by the card's overflow:hidden. */
-  font-size: clamp(0.95rem, 0.55vw + 0.78rem, 1.2rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-  line-height: 1.15;
+/* Icons stay neutral - colour is reserved for real warning/critical states. */
+.stat-card-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
 }
 
-.stat-card-warning .stat-card-value {
+.stat-card-value {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.stat-card-warning .stat-card-value,
+.stat-card-warning .stat-card-icon {
   color: var(--color-warning);
 }
 
-.stat-card-danger .stat-card-value {
+.stat-card-danger .stat-card-value,
+.stat-card-danger .stat-card-icon {
   color: var(--color-danger);
-}
-
-.stat-card-success .stat-card-value {
-  color: var(--color-success);
 }
 
 .charts-grid {
@@ -3256,9 +3262,9 @@ button:disabled {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 7px;
-  background: var(--color-primary-bg);
-  font-size: 0.85rem;
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
@@ -3445,6 +3451,318 @@ button:disabled {
     left: 1rem;
     right: 1rem;
     max-width: none;
+  }
+}
+
+/* ---------------- PHASE 34: Attendance ---------------- */
+.attendance-checkin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.attendance-checkin-date {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.attendance-checkin-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+.attendance-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Sundays and future days - visible but visually quiet. */
+.attendance-row-muted td {
+  opacity: 0.6;
+}
+
+/* ---------------- PHASE 35: operational layout (dashboard etc.) ---------------- */
+.btn-icon-svg {
+  flex-shrink: 0;
+}
+
+.page-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.page-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* A bordered section with a title row - used instead of nesting
+   oversized rounded cards inside each other. */
+.panel {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow);
+  min-width: 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.panel-note {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.panel-link:hover {
+  text-decoration: underline;
+}
+
+.panel-body {
+  padding: 1rem;
+}
+
+.panel-scroll {
+  overflow-x: auto;
+}
+
+.panel .data-table {
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.panel-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+.panel-empty strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* KPI strip: one bordered block with hairline dividers between cells,
+   instead of nine separate floating cards. */
+.kpi-group {
+  margin-bottom: 1rem;
+}
+
+.kpi-group-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--color-border);
+  overflow: hidden;
+}
+
+.kpi {
+  display: block;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 1px 0 0 var(--color-border), 0 1px 0 var(--color-border);
+}
+
+a.kpi:hover {
+  background: var(--color-bg);
+}
+
+.kpi-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.kpi-value {
+  min-height: 1.7rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.kpi-value-warning {
+  color: var(--color-warning);
+}
+
+.kpi-value-danger {
+  color: var(--color-danger);
+}
+
+.kpi-sub {
+  min-height: 1.1rem;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.kpi-delta-up {
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.kpi-delta-down {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.kpi-skeleton {
+  display: block;
+  height: 1.4rem;
+  width: 55%;
+  border-radius: 4px;
+}
+
+/* Column counts are fixed per group (not auto-fit) so a strip never ends
+   with one orphan cell on its own row. */
+@media (min-width: 1440px) {
+  .kpi-grid-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .kpi-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpi-grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.dash-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cell-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.qty-warning {
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.qty-danger {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

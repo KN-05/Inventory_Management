@@ -7,6 +7,8 @@ import AlertList from '../components/alerts/AlertList';
 import Loader from '../components/common/Loader';
 import PageHeader from '../components/common/PageHeader';
 import StatCard from '../components/dashboard/StatCard';
+import { Bell, PackageX, TriangleAlert } from 'lucide-react';
+import { ICON_SM } from '../utils/iconProps';
 
 function StockAlerts() {
   const toast = useToast();
@@ -59,9 +61,9 @@ function StockAlerts() {
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
       <div className="stats-grid" style={{ marginBottom: '1.25rem' }}>
-        <StatCard icon="🔔" label={`${filter || 'All'} Alerts`} value={summary.total} tone="default" index={0} />
-        <StatCard icon="⚠️" label="Low Stock" value={summary.lowStock} tone="warning" index={1} />
-        <StatCard icon="🚫" label="Out of Stock" value={summary.outOfStock} tone="danger" index={2} />
+        <StatCard icon={<Bell {...ICON_SM} />} label={`${filter || 'All'} Alerts`} value={summary.total} tone="default" index={0} />
+        <StatCard icon={<TriangleAlert {...ICON_SM} />} label="Low Stock" value={summary.lowStock} tone="warning" index={1} />
+        <StatCard icon={<PackageX {...ICON_SM} />} label="Out of Stock" value={summary.outOfStock} tone="danger" index={2} />
       </div>
 
       <div className="filters-bar">

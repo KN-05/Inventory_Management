@@ -1,6 +1,5 @@
 // src/components/sales/SalesHistoryTable.jsx
 
-import { motion } from 'framer-motion';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 const statusClass = {
@@ -32,12 +31,9 @@ function SalesHistoryTable({ sales, canCancel, onView, onCancel }) {
         </tr>
       </thead>
       <tbody>
-        {sales.map((s, index) => (
-          <motion.tr
+        {sales.map((s) => (
+          <tr
             key={s._id}
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.03 }}
           >
             <td className="cell-mono">{s.invoiceNumber}</td>
             <td>{s.customer?.name || 'Walk-in'}</td>
@@ -59,7 +55,7 @@ function SalesHistoryTable({ sales, canCancel, onView, onCancel }) {
                 </button>
               )}
             </td>
-          </motion.tr>
+          </tr>
         ))}
       </tbody>
     </table>

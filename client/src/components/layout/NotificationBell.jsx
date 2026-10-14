@@ -4,6 +4,8 @@
 // without needing websockets (out of scope for this project's stack).
 
 import { useEffect, useRef, useState } from 'react';
+import { Bell } from 'lucide-react';
+import { ICON } from '../../utils/iconProps';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -87,7 +89,7 @@ function NotificationBell() {
   return (
     <div className="notif-bell-container" ref={containerRef}>
       <button className="notif-bell-btn" onClick={handleToggle} aria-label="Notifications">
-        🔔
+        <Bell {...ICON} />
         {unreadCount > 0 && (
           <span className="notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
         )}

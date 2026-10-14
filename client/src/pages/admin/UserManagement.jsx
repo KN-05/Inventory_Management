@@ -1,40 +1,68 @@
 // src/pages/admin/UserManagement.jsx
-// Admin-only: view all users, create new ones (Manager/Staff), activate/
-// deactivate, and change roles. A user cannot change their own
-// status/role (enforced on the backend too - see adminController.js).
+// PHASE 34: now shared by Admin AND Manager, with different powers:
+//   Admin   - everything: create users, change roles, activate/deactivate,
+//             reset passwords, and permanently delete accounts.
+//   Manager - view the list and activate/deactivate Staff/Manager accounts
+//             only (never an Admin account). No create, role change,
+//             password reset, or delete - the controls simply aren't shown,
+//             and the backend rejects those calls for Manager anyway.
+// A user can never change their own status/role or delete themselves
+// (enforced on the backend too - see adminController.js).
 
-import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
-import { getUsers, createUser, updateUserStatus, updateUserRole, adminResetPassword } from '../../api/admin';
+import {
+  getUsers,
+  createUser,
+  updateUserStatus,
+  updateUserRole,
+  adminResetPassword,
+  deleteUser,
+} from '../../api/admin';
 import { roleLabel } from '../../utils/roleLabel';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+import PageHeader from '../../components/common/PageHeader';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import StatCard from '../../components/dashboard/StatCard';
 import AnimatedModal from '../../components/common/AnimatedModal';
 import CreateUserForm from './CreateUserForm';
+import { Search, UserCheck, UserX, Users } from 'lucide-react';
+import { ICON_SM } from '../../utils/iconProps';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(
   /\/api\/?$/,
   ''
 );
 
+const roleBadgeClass = {
+  admin: 'badge badge-red',
+  manager: 'badge badge-blue',
+  staff: 'badge badge-yellow',
+};
+
 function UserManagement() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin } = useAuth();
   const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState('');
 
-  // PHASE 26: Admin directly resets any other user's password - no OTP,
-  // since the Admin doing this is already fully authenticated.
+  // Admin directly resets any other user's password - no OTP, since the
+  // Admin doing this is already fully authenticated.
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resetError, setResetError] = useState('');
   const [resetting, setResetting] = useState(false);
+
+  // PHASE 34: Admin-only permanent delete, behind a confirm dialog.
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -52,6 +80,24 @@ function UserManagement() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  const summary = useMemo(
+    () => ({
+      total: users.length,
+      active: users.filter((u) => u.isActive).length,
+      inactive: users.filter((u) => !u.isActive).length,
+    }),
+    [users]
+  );
+
+  const visibleUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return users.filter((u) => {
+      if (roleFilter && u.role !== roleFilter) return false;
+      if (!q) return true;
+      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+    });
+  }, [users, search, roleFilter]);
 
   const handleCreateUser = async (formData) => {
     setCreateError('');
@@ -89,6 +135,18 @@ function UserManagement() {
     }
   };
 
+  const confirmDelete = async () => {
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    try {
+      await deleteUser(target._id);
+      toast.success(`${target.name} deleted`);
+      loadUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
   const openResetPassword = (targetUser) => {
     setResetTarget(targetUser);
     setResetPassword('');
@@ -112,17 +170,55 @@ function UserManagement() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>User Management</h1>
-        <Button variant="primary" onClick={() => setCreateOpen(true)}>
-          + Create User
-        </Button>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle={
+          isAdmin
+            ? 'Create accounts, assign roles, and control who can sign in'
+            : 'Activate or deactivate Staff and Manager accounts'
+        }
+        actions={
+          isAdmin && (
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              + Create User
+            </Button>
+          )
+        }
+      />
 
       {loadError && <p className="banner banner-error">{loadError}</p>}
 
+      <div className="stats-grid" style={{ marginBottom: '1.25rem' }}>
+        <StatCard icon={<Users {...ICON_SM} />} label="Total Users" value={summary.total} tone="default" index={0} />
+        <StatCard icon={<UserCheck {...ICON_SM} />} label="Active" value={summary.active} tone="success" index={1} />
+        <StatCard icon={<UserX {...ICON_SM} />} label="Deactivated" value={summary.inactive} tone="danger" index={2} />
+      </div>
+
+      <div className="filters-bar">
+        <div className="filters-search-wrap">
+          <span className="filters-search-icon" aria-hidden="true">
+            <Search {...ICON_SM} />
+          </span>
+          <input
+            type="text"
+            className="filters-search"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+          <option value="">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="manager">Accountant/Manager</option>
+          <option value="staff">Staff</option>
+        </select>
+      </div>
+
       {loading ? (
         <Loader label="Loading users..." />
+      ) : visibleUsers.length === 0 ? (
+        <p className="empty-state">No users match your search.</p>
       ) : (
         <table className="data-table">
           <thead>
@@ -136,18 +232,13 @@ function UserManagement() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u, index) => {
+            {visibleUsers.map((u) => {
               const isSelf = u._id === currentUser?.id;
+              // Manager can never touch an Admin account's status.
+              const canToggleStatus = !isSelf && (isAdmin || u.role !== 'admin');
               return (
-                <motion.tr
+                <tr
                   key={u._id}
-                  initial={{ opacity: 0, x: -4 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{
-                    duration: 0.22,
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: Math.min(index, 8) * 0.03,
-                  }}
                 >
                   <td>
                     <div className="table-avatar">
@@ -163,15 +254,19 @@ function UserManagement() {
                   </td>
                   <td>{u.email}</td>
                   <td>
-                    <select
-                      value={u.role}
-                      disabled={isSelf}
-                      onChange={(e) => handleRoleChange(u, e.target.value)}
-                    >
-                      <option value="staff">Staff</option>
-                      <option value="manager">Accountant/Manager</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    {isAdmin ? (
+                      <select
+                        value={u.role}
+                        disabled={isSelf}
+                        onChange={(e) => handleRoleChange(u, e.target.value)}
+                      >
+                        <option value="staff">Staff</option>
+                        <option value="manager">Accountant/Manager</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : (
+                      <span className={roleBadgeClass[u.role] || 'badge'}>{roleLabel(u.role)}</span>
+                    )}
                   </td>
                   <td>
                     <span className={u.isActive ? 'badge badge-green' : 'badge badge-red'}>
@@ -181,35 +276,55 @@ function UserManagement() {
                   <td>
                     <button
                       className="btn-link"
-                      disabled={isSelf}
+                      disabled={!canToggleStatus}
                       onClick={() => handleToggleStatus(u)}
                     >
                       {u.isActive ? 'Deactivate' : 'Activate'}
                     </button>
-                    {!isSelf && (
+                    {isAdmin && !isSelf && (
                       <button className="btn-link" onClick={() => openResetPassword(u)}>
                         Reset Password
                       </button>
                     )}
+                    {isAdmin && !isSelf && (
+                      <button className="btn-link btn-link-danger" onClick={() => setDeleteTarget(u)}>
+                        Delete
+                      </button>
+                    )}
                   </td>
-                </motion.tr>
+                </tr>
               );
             })}
           </tbody>
         </table>
       )}
 
-      <CreateUserForm
-        open={createOpen}
-        onSubmit={handleCreateUser}
-        onCancel={() => setCreateOpen(false)}
-        error={createError}
+      {isAdmin && (
+        <CreateUserForm
+          open={createOpen}
+          onSubmit={handleCreateUser}
+          onCancel={() => setCreateOpen(false)}
+          error={createError}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete this user?"
+        message={
+          deleteTarget
+            ? `"${deleteTarget.name}" (${deleteTarget.email}) will be permanently removed and can no longer sign in. This cannot be undone. If you only want to block access for now, use Deactivate instead.`
+            : ''
+        }
+        confirmLabel="Delete User"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
 
-      {/* PHASE 26: Admin's direct "Reset Password" - no OTP step, since
-          only an already-authenticated Admin can reach this page/action.
-          Manager -> Staff resets go through the separate OTP-gated flow
-          on the Staff Passwords page instead (see StaffPasswords.jsx). */}
+      {/* Admin's direct "Reset Password" - no OTP step, since only an
+          already-authenticated Admin can reach this action. Manager -> Staff
+          resets go through the separate OTP-gated flow on the Staff
+          Passwords page instead (see StaffPasswords.jsx). */}
       <AnimatedModal open={!!resetTarget} onClose={() => setResetTarget(null)} maxWidth={380}>
         <h2>Reset password for {resetTarget?.name}</h2>
         <p className="page-subtitle" style={{ marginBottom: '1rem' }}>

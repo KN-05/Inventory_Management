@@ -15,8 +15,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Search, UserRound, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { roleLabel } from '../../utils/roleLabel';
+import { ICON_SM } from '../../utils/iconProps';
 import NotificationBell from './NotificationBell';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(
@@ -50,7 +52,7 @@ function Navbar({ onMenuClick }) {
 
   return (
     <header className="navbar">
-      <button className="navbar-menu-btn" aria-label="Open menu" onClick={onMenuClick}>
+      <button className="navbar-menu-btn" aria-label="Open navigation menu" onClick={onMenuClick}>
         <span />
         <span />
         <span />
@@ -58,7 +60,7 @@ function Navbar({ onMenuClick }) {
 
       <form className="navbar-search" onSubmit={handleSearchSubmit} role="search">
         <span className="navbar-search-icon" aria-hidden="true">
-          🔍
+          <Search {...ICON_SM} />
         </span>
         <input
           type="search"
@@ -92,7 +94,7 @@ function Navbar({ onMenuClick }) {
             <span className="navbar-user-name">{user?.name}</span>
           </span>
           <span className="navbar-profile-chevron" aria-hidden="true">
-            ▾
+            <ChevronDown size={14} strokeWidth={2} />
           </span>
         </button>
 
@@ -120,10 +122,10 @@ function Navbar({ onMenuClick }) {
                 navigate('/profile');
               }}
             >
-              👤 Profile
+              <UserRound {...ICON_SM} /> Profile
             </a>
             <button type="button" className="navbar-profile-dropdown-logout" onClick={logout}>
-              ⏻ Logout
+              <LogOut {...ICON_SM} /> Log out
             </button>
           </div>
         )}

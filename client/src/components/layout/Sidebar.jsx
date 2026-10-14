@@ -1,26 +1,45 @@
 // src/components/layout/Sidebar.jsx
-// Persistent left navigation, shown on every protected page. Highlights
-// the active route and shows Admin/Manager-specific links based on role.
-// PHASE 2: 3 roles now - User Management is Admin-only; Reports is
-// Admin + Manager (Accountant/Manager has reporting access per the spec).
+// Persistent left navigation on every protected page. Highlights the
+// active route and shows Admin/Manager links based on role.
 //
-// PHASE 18: added a small icon per link and a bottom user profile card
-// (avatar/name/role + logout) to match the reference design - purely
-// visual/structural, every route/permission check above is unchanged.
+// Icons are lucide-react, drawn through the shared ICON props so every
+// icon has the same size and stroke weight. Hover feedback is a plain CSS
+// background change (no sliding animation).
 //
-// PHASE 33: desktop-collapsible sidebar. Link text is now wrapped in its
-// own <span className="sidebar-link-text"> (was a bare text node) so CSS
-// can hide just the text while keeping icons centered when collapsed -
-// see the "sidebar-collapsed" rules in AppStyles.jsx. A floating toggle
-// handle sits on the sidebar's edge to flip the state; each link gets a
-// native title tooltip so its purpose is still clear as an icon-only rail.
-// Mobile behaviour (hamburger + slide-over drawer) is completely
-// untouched - the collapse rules only apply at desktop widths.
+// Desktop: can be collapsed to an icon-only rail (link text gets its own
+// <span className="sidebar-link-text"> so CSS can hide just the text; each
+// link keeps a title tooltip). Mobile: the same markup is a slide-over
+// drawer opened from the navbar's menu button - see AppStyles.jsx.
+//
+// Routes and role checks are unchanged: Purchases and the Admin/Management
+// group are Admin + Manager; Activity Logs and Settings are Admin only.
 
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  Package,
+  Tags,
+  Truck,
+  ShoppingBag,
+  CircleAlert,
+  ShoppingCart,
+  Users,
+  UserCog,
+  KeyRound,
+  FileText,
+  ChartNoAxesCombined,
+  Lightbulb,
+  History,
+  Settings,
+  UserRound,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { roleLabel } from '../../utils/roleLabel';
+import { ICON } from '../../utils/iconProps';
 
 const navLinkClass = ({ isActive }) => 'sidebar-link' + (isActive ? ' sidebar-link-active' : '');
 
@@ -29,18 +48,14 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
   ''
 );
 
-// Wrapping NavLink lets it keep its routing behaviour (active state,
-// navigation) while gaining Framer Motion's whileHover animation.
-const MotionNavLink = motion.create(NavLink);
-
-function SidebarLink({ to, icon, label, onClick, children }) {
+function SidebarLink({ to, icon: Icon, label, onClick, children }) {
   return (
-    <MotionNavLink to={to} className={navLinkClass} onClick={onClick} whileHover={{ x: 2 }} title={label}>
+    <NavLink to={to} className={navLinkClass} onClick={onClick} title={label}>
       <span className="sidebar-link-icon" aria-hidden="true">
-        {icon}
+        <Icon {...ICON} />
       </span>
       <span className="sidebar-link-text">{children}</span>
-    </MotionNavLink>
+    </NavLink>
   );
 }
 
@@ -49,13 +64,11 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
 
   return (
     <>
-      {/* Dimmed backdrop on mobile when the sidebar is open */}
+      {/* Dimmed backdrop on mobile when the drawer is open */}
       {open && <div className="sidebar-backdrop" onClick={onClose} />}
 
-      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
-        {/* PHASE 33: floating collapse/expand handle - desktop only (hidden
-            on mobile via CSS, where the hamburger+drawer pattern is used
-            instead). */}
+      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Main navigation">
+        {/* Desktop-only collapse handle (hidden on mobile via CSS) */}
         {onToggleCollapse && (
           <button
             type="button"
@@ -64,7 +77,7 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? '›' : '‹'}
+            {collapsed ? <ChevronRight size={14} strokeWidth={2} /> : <ChevronLeft size={14} strokeWidth={2} />}
           </button>
         )}
 
@@ -75,76 +88,69 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
 
         <nav className="sidebar-nav">
           <p className="sidebar-section-label">Overview</p>
-          <SidebarLink to="/dashboard" icon="🏠" label="Dashboard" onClick={onClose}>
+          <SidebarLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={onClose}>
             Dashboard
+          </SidebarLink>
+          {/* Every role gets this link; the page itself shows the right view
+              (Admin = team view only). */}
+          <SidebarLink to="/attendance" icon={CalendarCheck} label="Attendance" onClick={onClose}>
+            Attendance
           </SidebarLink>
 
           <p className="sidebar-section-label">Inventory</p>
-          <SidebarLink to="/products" icon="📦" label="Products" onClick={onClose}>
+          <SidebarLink to="/products" icon={Package} label="Products" onClick={onClose}>
             Products
           </SidebarLink>
-          <SidebarLink to="/categories" icon="🗂️" label="Categories" onClick={onClose}>
+          <SidebarLink to="/categories" icon={Tags} label="Categories" onClick={onClose}>
             Categories
           </SidebarLink>
-          <SidebarLink to="/suppliers" icon="🚚" label="Suppliers" onClick={onClose}>
+          <SidebarLink to="/suppliers" icon={Truck} label="Suppliers" onClick={onClose}>
             Suppliers
           </SidebarLink>
-          {/* PHASE 7: Purchases - Admin + Manager only, matching the
-              spec's sidebar layout (Staff's sidebar has no Purchases link) */}
+          {/* Purchases: Admin + Manager only (Staff's sidebar has no link) */}
           {(isAdmin || isManager) && (
-            <SidebarLink to="/purchases" icon="🧾" label="Purchases" onClick={onClose}>
+            <SidebarLink to="/purchases" icon={ShoppingBag} label="Purchases" onClick={onClose}>
               Purchases
             </SidebarLink>
           )}
-          <SidebarLink to="/alerts" icon="⚠️" label="Stock Alerts" onClick={onClose}>
+          <SidebarLink to="/alerts" icon={CircleAlert} label="Stock Alerts" onClick={onClose}>
             Stock Alerts
             {activeAlertsCount > 0 && <span className="nav-badge">{activeAlertsCount}</span>}
           </SidebarLink>
 
-          {/* PHASE 8: Sales, Billing, Customers - ALL three roles get
-              these per the spec's sidebar layout (Staff's sidebar
-              explicitly includes "Sales", "Billing", "Customers" too). */}
           <p className="sidebar-section-label">Sales</p>
-          <SidebarLink to="/sales" icon="💰" label="Sales / Billing" onClick={onClose}>
+          <SidebarLink to="/sales" icon={ShoppingCart} label="Sales / Billing" onClick={onClose}>
             Sales / Billing
           </SidebarLink>
-          <SidebarLink to="/customers" icon="🙍" label="Customers" onClick={onClose}>
+          <SidebarLink to="/customers" icon={Users} label="Customers" onClick={onClose}>
             Customers
           </SidebarLink>
 
           {(isAdmin || isManager) && (
             <>
               <p className="sidebar-section-label">{isAdmin ? 'Admin' : 'Management'}</p>
-              {isAdmin && (
-                <SidebarLink to="/admin/users" icon="👥" label="User Management" onClick={onClose}>
-                  User Management
-                </SidebarLink>
-              )}
-              {/* PHASE 26: visible to Admin + Manager - restricted to
-                  just Staff accounts + password reset, unlike the full
-                  User Management page above. */}
-              <SidebarLink to="/admin/staff-passwords" icon="🔑" label="Staff Passwords" onClick={onClose}>
+              {/* Manager sees User Management too (view + activate/deactivate only) */}
+              <SidebarLink to="/admin/users" icon={UserCog} label="User Management" onClick={onClose}>
+                User Management
+              </SidebarLink>
+              <SidebarLink to="/admin/staff-passwords" icon={KeyRound} label="Staff Passwords" onClick={onClose}>
                 Staff Passwords
               </SidebarLink>
-              <SidebarLink to="/admin/reports" icon="📄" label="Reports" onClick={onClose}>
+              <SidebarLink to="/admin/reports" icon={FileText} label="Reports" onClick={onClose}>
                 Reports
               </SidebarLink>
-              {/* PHASE 10: Analytics - Admin + Manager, matching the spec's
-                  sidebar having both "Reports" and "Analytics" separately. */}
-              <SidebarLink to="/admin/analytics" icon="📈" label="Analytics" onClick={onClose}>
+              <SidebarLink to="/admin/analytics" icon={ChartNoAxesCombined} label="Analytics" onClick={onClose}>
                 Analytics
               </SidebarLink>
-              {/* PHASE 28/29: AI Insights - same Admin + Manager access as
-                  Analytics. */}
-              <SidebarLink to="/admin/ai-insights" icon="🧠" label="AI Insights" onClick={onClose}>
+              <SidebarLink to="/admin/ai-insights" icon={Lightbulb} label="AI Insights" onClick={onClose}>
                 AI Insights
               </SidebarLink>
               {isAdmin && (
                 <>
-                  <SidebarLink to="/admin/activity-logs" icon="🕒" label="Activity Logs" onClick={onClose}>
+                  <SidebarLink to="/admin/activity-logs" icon={History} label="Activity Logs" onClick={onClose}>
                     Activity Logs
                   </SidebarLink>
-                  <SidebarLink to="/admin/settings" icon="⚙️" label="Settings" onClick={onClose}>
+                  <SidebarLink to="/admin/settings" icon={Settings} label="Settings" onClick={onClose}>
                     Settings
                   </SidebarLink>
                 </>
@@ -153,14 +159,11 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
           )}
 
           <p className="sidebar-section-label">Account</p>
-          <SidebarLink to="/profile" icon="👤" label="Profile" onClick={onClose}>
+          <SidebarLink to="/profile" icon={UserRound} label="Profile" onClick={onClose}>
             Profile
           </SidebarLink>
         </nav>
 
-        {/* PHASE 18: bottom user card, matching the reference design.
-            Reuses the exact same user/logout the Navbar already uses -
-            no new auth logic. */}
         <div className="sidebar-user-card" title={collapsed ? `${user?.name} (${roleLabel(user?.role)})` : undefined}>
           <div className="sidebar-user-avatar">
             {user?.photo ? (
@@ -176,14 +179,8 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
             </div>
           )}
           {!collapsed && (
-            <button
-              type="button"
-              className="sidebar-logout-btn"
-              onClick={logout}
-              aria-label="Logout"
-              title="Logout"
-            >
-              ⏻
+            <button type="button" className="sidebar-logout-btn" onClick={logout} aria-label="Log out" title="Log out">
+              <LogOut size={16} strokeWidth={1.75} />
             </button>
           )}
         </div>

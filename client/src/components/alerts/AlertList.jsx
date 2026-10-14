@@ -2,7 +2,6 @@
 // Animation (Phase 1 revision): each alert item fades/slides in with a
 // small stagger, and lifts slightly on hover - both via Framer Motion.
 
-import { motion } from 'framer-motion';
 import Button from '../common/Button';
 
 const badgeClass = {
@@ -17,14 +16,10 @@ function AlertList({ alerts, onResolve }) {
 
   return (
     <ul className="alert-list">
-      {alerts.map((alert, index) => (
-        <motion.li
+      {alerts.map((alert) => (
+        <li
           key={alert._id}
           className="alert-item"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(index, 8) * 0.04 }}
-          whileHover={{ y: -1 }}
         >
           <div>
             <span className={badgeClass[alert.product?.status] || 'badge'}>
@@ -41,7 +36,7 @@ function AlertList({ alerts, onResolve }) {
             </Button>
           )}
           {alert.status === 'resolved' && <span className="badge badge-green">Resolved</span>}
-        </motion.li>
+        </li>
       ))}
     </ul>
   );

@@ -12,6 +12,8 @@ import { getStockReport, getSupplierReport } from '../../api/admin';
 import { formatCurrency } from '../../utils/formatCurrency';
 import Loader from '../../components/common/Loader';
 import StatCard from '../../components/dashboard/StatCard';
+import { Boxes, Package, Wallet } from 'lucide-react';
+import { ICON_SM } from '../../utils/iconProps';
 
 function Reports() {
   const [stockReport, setStockReport] = useState(null);
@@ -43,11 +45,11 @@ function Reports() {
           <div className="chart-card" style={{ marginBottom: '1rem' }}>
             <h3>Stock Report</h3>
             <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-              <StatCard index={0} icon="📦" label="Total Products" value={stockReport.totals.totalProducts} />
-              <StatCard index={1} icon="🔢" label="Total Quantity" value={stockReport.totals.totalQuantity} />
+              <StatCard index={0} icon={<Package {...ICON_SM} />} label="Total Products" value={stockReport.totals.totalProducts} />
+              <StatCard index={1} icon={<Boxes {...ICON_SM} />} label="Total Quantity" value={stockReport.totals.totalQuantity} />
               <StatCard
                 index={2}
-                icon="💰"
+                icon={<Wallet {...ICON_SM} />}
                 tone="success"
                 label="Total Stock Value"
                 value={formatCurrency(stockReport.totals.totalValue)}
