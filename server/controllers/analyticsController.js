@@ -166,7 +166,7 @@ const getPurchaseAnalytics = asyncHandler(async (req, res) => {
 const getProfitAnalytics = asyncHandler(async (req, res) => {
   const [purchases, sales, categories] = await Promise.all([
     Purchase.find({ status: 'received' }).select('items').lean(),
-    Sale.find({ status: 'completed' }).populate('items.product', 'name category').select('items createdAt').lean(),
+    Sale.find({ status: 'completed' }).populate('items.product', 'name category').select('items createdAt gstMode').lean(),
     Category.find().select('name').lean(),
   ]);
 
@@ -203,7 +203,11 @@ const getProfitAnalytics = asyncHandler(async (req, res) => {
       const unitCost = avgCostByProduct.get(productId);
       if (unitCost === undefined) hasUnknownCostProduct = true;
       const cost = (unitCost || 0) * item.quantity;
-      const revenue = item.subtotal;
+      // Profit is measured on money the business keeps: for GST-inclusive
+      // sales that is the taxable value (the GST inside the price is owed to
+      // the government, not revenue). Older sales have no GST split, so their
+      // subtotal is used as before.
+      const revenue = sale.gstMode === 'inclusive' ? item.taxableValue : item.subtotal;
       const profit = revenue - cost;
 
       totalRevenue += revenue;

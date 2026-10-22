@@ -8,10 +8,12 @@ const logActivity = require('../utils/logActivity');
 const createNotification = require('../utils/createNotification');
 const { generateUniqueInvoiceNumber } = require('../utils/generateInvoiceNumber');
 const toCsv = require('../utils/toCsv');
+const { calculateGst, round2 } = require('../utils/gst');
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const StockMovement = require('../models/StockMovement');
+const { applyStockChange, findStockLimitViolation } = require('../utils/stockService');
 
 // @desc   Get all sales, with optional filters + pagination
 // @route  GET /api/sales?customer=&status=&search=&page=&limit=
@@ -72,7 +74,9 @@ const getSaleById = asyncHandler(async (req, res) => {
 // @route  POST /api/sales
 // @access Private (Admin + Manager + Staff, per SALES_CREATE)
 const createSale = asyncHandler(async (req, res) => {
-  const { customer, items, discount = 0, tax = 0, paymentMethod, paymentStatus } = req.body;
+  // `tax` is no longer accepted from the client: GST is calculated here from each
+  // product's SGST/CGST/IGST rates (see utils/gst.js), never trusted from the browser.
+  const { customer, items, discount = 0, paymentMethod, paymentStatus, supplyType = 'intra' } = req.body;
 
   let customerDoc = null;
   if (customer) {
@@ -121,15 +125,41 @@ const createSale = asyncHandler(async (req, res) => {
   }
 
   const itemsTotal = computedItems.reduce((sum, i) => sum + i.subtotal, 0);
-  const totalAmount = Math.max(itemsTotal - Number(discount || 0) + Number(tax || 0), 0);
+  if (Number(discount || 0) > round2(itemsTotal)) {
+    res.status(400);
+    throw new Error('Discount cannot be more than the items total');
+  }
+
+  // GST: product prices are GST-INCLUSIVE MRPs, so the customer pays the MRP
+  // (less any discount) and GST is worked out from inside that amount, using
+  // each product's rates. Within the state that is SGST + CGST; to another
+  // state it is IGST - never both. See utils/gst.js.
+  const gst = calculateGst(
+    computedItems.map((i) => ({
+      subtotal: i.subtotal,
+      sgstRate: i._productDoc.sgstRate,
+      cgstRate: i._productDoc.cgstRate,
+      igstRate: i._productDoc.igstRate,
+    })),
+    discount,
+    supplyType === 'inter' ? 'inter' : 'intra'
+  );
+  const totalAmount = gst.totals.grandTotal;
   const invoiceNumber = await generateUniqueInvoiceNumber();
 
   const sale = await Sale.create({
     invoiceNumber,
     customer: customer || null,
-    items: computedItems.map(({ _productDoc, ...rest }) => rest),
-    discount,
-    tax,
+    items: computedItems.map(({ _productDoc, ...rest }, index) => ({ ...rest, ...gst.lines[index] })),
+    discount: gst.totals.discount,
+    tax: gst.totals.gstTotal,
+    gstApplied: true,
+    gstMode: 'inclusive',
+    supplyType: supplyType === 'inter' ? 'inter' : 'intra',
+    taxableTotal: gst.totals.taxableTotal,
+    totalSgst: gst.totals.sgstTotal,
+    totalCgst: gst.totals.cgstTotal,
+    totalIgst: gst.totals.igstTotal,
     totalAmount,
     paymentMethod,
     paymentStatus,
@@ -199,13 +229,24 @@ const cancelSale = asyncHandler(async (req, res) => {
     throw new Error('This sale has already been cancelled');
   }
 
-  for (const item of sale.items) {
-    const product = await Product.findById(item.product); // eslint-disable-line no-await-in-loop
-    if (!product) continue; // product may have been deleted since the sale was made
+  // LIMITS: restoring stock is also a stock increase - it may not push any
+  // product above 1000 units. Checked for every line before anything changes.
+  const limitViolation = await findStockLimitViolation(
+    sale.items.map((item) => ({ product: item.product, quantity: item.quantity }))
+  );
+  if (limitViolation) {
+    res.status(400);
+    throw new Error(`Cannot cancel this sale: ${limitViolation}`);
+  }
 
-    const previousStock = product.quantity;
-    product.quantity += item.quantity;
-    await product.save(); // eslint-disable-line no-await-in-loop
+  for (const item of sale.items) {
+    const result = await applyStockChange(item.product, Number(item.quantity)); // eslint-disable-line no-await-in-loop
+    if (result.error && result.error.status === 404) continue; // product may have been deleted since the sale was made
+    if (result.error) {
+      res.status(result.error.status);
+      throw new Error(`Cannot cancel this sale: ${result.error.message}`);
+    }
+    const { product, previousStock } = result;
 
     await StockMovement.create({
       // eslint-disable-line no-await-in-loop
@@ -286,6 +327,10 @@ const exportSales = asyncHandler(async (req, res) => {
       quantity: item.quantity,
       sellingPrice: item.sellingPrice,
       subtotal: item.subtotal,
+      taxableValue: item.taxableValue,
+      sgstAmount: item.sgstAmount,
+      cgstAmount: item.cgstAmount,
+      igstAmount: item.igstAmount,
       saleTotal: sale.totalAmount,
       paymentMethod: sale.paymentMethod,
       paymentStatus: sale.paymentStatus,
@@ -303,6 +348,10 @@ const exportSales = asyncHandler(async (req, res) => {
     { key: 'quantity', label: 'Quantity' },
     { key: 'sellingPrice', label: 'Unit Price' },
     { key: 'subtotal', label: 'Line Subtotal' },
+    { key: 'taxableValue', label: 'Taxable Value' },
+    { key: 'sgstAmount', label: 'SGST' },
+    { key: 'cgstAmount', label: 'CGST' },
+    { key: 'igstAmount', label: 'IGST' },
     { key: 'saleTotal', label: 'Sale Total' },
     { key: 'paymentMethod', label: 'Payment Method' },
     { key: 'paymentStatus', label: 'Payment Status' },

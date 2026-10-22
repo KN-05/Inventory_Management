@@ -23,6 +23,7 @@ function SalesHistoryTable({ sales, canCancel, onView, onCancel }) {
         <tr>
           <th>Invoice #</th>
           <th>Customer</th>
+          <th className="col-numeric">GST</th>
           <th className="col-numeric">Total</th>
           <th>Payment</th>
           <th>Status</th>
@@ -37,6 +38,7 @@ function SalesHistoryTable({ sales, canCancel, onView, onCancel }) {
           >
             <td className="cell-mono">{s.invoiceNumber}</td>
             <td>{s.customer?.name || 'Walk-in'}</td>
+            <td className="cell-numeric">{formatCurrency(s.tax || 0)}</td>
             <td className="cell-numeric">{formatCurrency(s.totalAmount)}</td>
             <td>
               <span className={paymentClass[s.paymentStatus] || 'badge'}>{s.paymentStatus}</span>

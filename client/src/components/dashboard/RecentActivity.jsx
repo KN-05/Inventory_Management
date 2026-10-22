@@ -1,13 +1,15 @@
 // src/components/dashboard/RecentActivity.jsx
 // Lists the most recent ActivityLog entries (written by the backend's
 // logActivity() whenever someone creates/updates/deletes something).
-// Each row: module icon, who did what, and when. Hovering the time shows
-// the exact date and time.
+// Each row is a 3-column grid: module icon | who + what happened | time.
+// Long descriptions (emails, invoice numbers, amounts) wrap inside their own
+// column and never push the icon or the time out of line. Hovering the time
+// shows the exact date and time.
 
 import ModuleIcon from '../common/ModuleIcon';
 
 function timeAgo(dateString) {
-  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(dateString).getTime()) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -18,7 +20,7 @@ function timeAgo(dateString) {
 }
 
 function RecentActivity({ activities }) {
-  if (activities.length === 0) {
+  if (!activities || activities.length === 0) {
     return (
       <div className="panel-empty">
         <strong>No activity yet</strong>
@@ -28,21 +30,30 @@ function RecentActivity({ activities }) {
   }
 
   return (
-    <ul className="activity-list">
-      {activities.map((a) => (
-        <li key={a.id}>
-          <span className="activity-text">
+    // The list scrolls inside the card once it gets long, so a busy activity
+    // log can't stretch the whole dashboard.
+    <div className="activity-scroll">
+      <ul className="activity-list">
+        {activities.map((a) => (
+          <li key={a.id}>
             <span className="activity-icon" aria-hidden="true">
               <ModuleIcon module={a.module} />
             </span>
-            <strong>{a.user}</strong> {a.action}
-          </span>
-          <span className="activity-time" title={new Date(a.createdAt).toLocaleString()}>
-            {timeAgo(a.createdAt)}
-          </span>
-        </li>
-      ))}
-    </ul>
+            <div className="activity-body">
+              <span className="activity-user">{a.user}</span>
+              <span className="activity-desc">{a.action}</span>
+            </div>
+            <time
+              className="activity-time"
+              dateTime={new Date(a.createdAt).toISOString()}
+              title={new Date(a.createdAt).toLocaleString()}
+            >
+              {timeAgo(a.createdAt)}
+            </time>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

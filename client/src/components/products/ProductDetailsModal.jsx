@@ -23,6 +23,7 @@ import Button from '../common/Button';
 import Loader from '../common/Loader';
 import { API_ORIGIN } from '../../api/axiosInstance';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { productGst, formatRate } from '../../utils/gst';
 import { getProductStockMovements } from '../../api/products';
 
 // Same status -> badge class mapping used in ProductTable.jsx, kept in
@@ -104,6 +105,8 @@ function ProductDetailsModal({ open, product, onClose }) {
 
   if (!product) return null;
 
+  const gst = productGst(product);
+
   const categoryName = product.category?.name || '-';
   const supplierName = product.supplier?.name || '-';
 
@@ -129,7 +132,12 @@ function ProductDetailsModal({ open, product, onClose }) {
         <DetailItem label="Supplier" value={supplierName} />
         <DetailItem label="Quantity In Stock" value={product.quantity} />
         <DetailItem label="Low Stock Threshold" value={product.lowStockThreshold} />
-        <DetailItem label="Price" value={formatCurrency(product.price)} />
+        <DetailItem label="MRP (GST inclusive)" value={formatCurrency(product.price)} />
+        <DetailItem label="Taxable value" value={formatCurrency(gst.taxableValue)} />
+        <DetailItem label="SGST" value={`${formatRate(gst.sgstRate)} - ${formatCurrency(gst.sgstAmount)}`} />
+        <DetailItem label="CGST" value={`${formatRate(gst.cgstRate)} - ${formatCurrency(gst.cgstAmount)}`} />
+        <DetailItem label="IGST" value={`${formatRate(gst.igstRate)} - ${formatCurrency(gst.igstAmount)}`} />
+        <DetailItem label="Total GST included" value={formatCurrency(gst.gstIncluded)} />
         <DetailItem label="Status" value={<span className={statusClass[product.status] || 'badge'}>{product.status}</span>} />
       </div>
 

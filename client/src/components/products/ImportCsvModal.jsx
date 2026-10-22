@@ -22,11 +22,13 @@ import AnimatedModal from '../common/AnimatedModal';
 import Button from '../common/Button';
 import PasswordConfirmModal from '../common/PasswordConfirmModal';
 
-const TEMPLATE_CSV = `name,sku,category,supplier,quantity,price,lowStockThreshold
-Wireless Mouse,ELEC-101,Electronics,Acme Supplies Co.,50,19.99,10
-A4 Notebook,OFF-101,Office Supplies,Acme Supplies Co.,200,3.50,25
+// `price` is the MRP INCLUDING GST (the customer pays exactly this).
+// sgstRate / cgstRate / igstRate are optional percentages - the GST already
+// inside that price. Leave them empty or 0 for products with no GST.
+const TEMPLATE_CSV = `name,sku,category,supplier,quantity,price,lowStockThreshold,sgstRate,cgstRate,igstRate
+Wireless Mouse,ELEC-101,Electronics,Acme Supplies Co.,50,1180,10,9,9,0
+A4 Notebook,OFF-101,Office Supplies,Acme Supplies Co.,200,525,25,2.5,2.5,0
 `;
-
 function downloadTemplate() {
   const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -104,6 +106,12 @@ function ImportCsvModal({ open, onClose, onImported }) {
         Columns required: <code>name, category, supplier, quantity, price</code>.{' '}
         <code>sku</code> and <code>lowStockThreshold</code> are optional - SKU and barcode are
         auto-generated when left blank. Category and supplier names must already exist.
+      </p>
+      {/* LIMITS: same rules the server enforces for every imported row. */}
+      <p className="field-hint" style={{ marginBottom: '0.75rem' }}>
+        Limits: <code>quantity</code> must be a whole number from 0 to 1000; <code>price</code> must be
+        more than 0 and at most 10000000 (₹1,00,00,000), plain number with up to 2 decimals (no commas).
+        Rows that break a limit are rejected and listed with the product name and field.
       </p>
 
       <button type="button" className="btn-link" onClick={downloadTemplate}>

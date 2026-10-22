@@ -26,6 +26,12 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorize, requirePermission } = require('../middleware/roleMiddleware');
 const { PERMISSIONS } = require('../config/permissions');
 const { runValidation } = require('../middleware/validateMiddleware');
+const {
+  parsePrice,
+  parseQuantity,
+  parseStockAmount,
+  validatorFrom,
+} = require('../utils/productLimits');
 
 // PHASE 13: multer handles the multipart/form-data file upload for CSV
 // import. `memoryStorage` keeps the file in RAM as a Buffer (req.file.buffer)
@@ -79,14 +85,18 @@ const productValidationRules = [
   body('name').trim().notEmpty().withMessage('Product name is required'),
   body('category').notEmpty().withMessage('Category is required'),
   body('supplier').notEmpty().withMessage('Supplier is required'),
-  body('quantity')
-    .isInt({ min: 0 })
-    .withMessage('Quantity must be a number 0 or greater'),
-  body('price').isFloat({ min: 0 }).withMessage('Price must be a number 0 or greater'),
+  // LIMITS: quantity integer 0..1000, price 0.01..1,00,00,000 (max 2 decimals).
+  // Shared parsers (utils/productLimits.js) so the route, controller and CSV
+  // import all apply exactly the same rules and messages.
+  body('quantity').custom(validatorFrom(parseQuantity)),
+  body('price').custom(validatorFrom(parsePrice)),
   body('lowStockThreshold')
     .optional()
     .isInt({ min: 0 })
     .withMessage('Low stock threshold must be a number 0 or greater'),
+  body('sgstRate').optional().isFloat({ min: 0, max: 100 }).withMessage('SGST must be between 0 and 100'),
+  body('cgstRate').optional().isFloat({ min: 0, max: 100 }).withMessage('CGST must be between 0 and 100'),
+  body('igstRate').optional().isFloat({ min: 0, max: 100 }).withMessage('IGST must be between 0 and 100'),
 ];
 
 // Admin + Manager + Staff can view, create, edit, and adjust stock
@@ -138,13 +148,13 @@ router.post(
 router.patch(
   '/:id/increase-stock',
   requirePermission(PERMISSIONS.INVENTORY_UPDATE),
-  runValidation([body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0')]),
+  runValidation([body('amount').custom(validatorFrom(parseStockAmount))]),
   increaseStock
 );
 router.patch(
   '/:id/decrease-stock',
   requirePermission(PERMISSIONS.INVENTORY_UPDATE),
-  runValidation([body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0')]),
+  runValidation([body('amount').custom(validatorFrom(parseStockAmount))]),
   decreaseStock
 );
 // PHASE 7: available to every role that can view products at all (Admin,

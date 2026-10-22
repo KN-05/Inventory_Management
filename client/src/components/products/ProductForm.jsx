@@ -17,21 +17,107 @@
 // for the image endpoint to attach to (same reasoning as the user's own
 // profile photo upload).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AnimatedModal from '../common/AnimatedModal';
 import Button from '../common/Button';
 import { API_ORIGIN } from '../../api/axiosInstance';
 import { useAuth } from '../../context/useAuth';
+import { formatCurrency } from '../../utils/formatCurrency';
+import { productGst, formatRate } from '../../utils/gst';
+import {
+  MAX_PRICE,
+  MAX_QUANTITY,
+  parsePrice,
+  parseQuantity,
+} from '../../utils/productLimits';
 
 const emptyForm = {
   name: '',
   category: '',
   supplier: '',
   quantity: 0,
-  price: 0,
+  price: '', // no default: a price of 0 is not allowed, so the person must enter one
   lowStockThreshold: 10,
   barcode: '',
+  sgstRate: 0,
+  cgstRate: 0,
+  igstRate: 0,
 };
+
+// LIMITS: JavaScript validation (the HTML min/max attributes below are only a
+// hint - they do not stop pasted values, autofill or keyboard tricks, and the
+// server re-validates everything anyway). Returns { field: message } for every
+// invalid field; an empty object means the form is valid.
+function validateForm(form) {
+  const errors = {};
+  if (!String(form.name).trim()) errors.name = 'Product name is required.';
+  if (!form.category) errors.category = 'Category is required.';
+  if (!form.supplier) errors.supplier = 'Supplier is required.';
+
+  const quantity = parseQuantity(form.quantity);
+  if (!quantity.ok) errors.quantity = quantity.message;
+
+  const price = parsePrice(form.price);
+  if (!price.ok) errors.price = price.message;
+
+  const threshold = Number(form.lowStockThreshold);
+  if (String(form.lowStockThreshold).trim() === '' || !Number.isInteger(threshold) || threshold < 0) {
+    errors.lowStockThreshold = 'Low stock threshold must be a whole number, 0 or greater.';
+  }
+
+  ['sgstRate', 'cgstRate', 'igstRate'].forEach((field) => {
+    const value = Number(form[field]);
+    if (String(form[field]).trim() !== '' && (!Number.isFinite(value) || value < 0 || value > 100)) {
+      errors[field] = 'GST rate must be between 0 and 100.';
+    }
+  });
+  return errors;
+}
+
+// Number inputs happily accept "e", "+" and "-" (1e9, -5). None of them is
+// valid for a price or a quantity, so don't let them be typed at all.
+const blockNonNumericKeys = (e) => {
+  if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+};
+
+// Live breakdown of the price the person is typing. The price is the MRP
+// INCLUDING GST, so this shows the GST already inside it (nothing is added):
+//   Price including GST 85,000 = Taxable value 72,033.90 + GST 12,966.10
+function PreviewRow({ label, value, strong }) {
+  return (
+    <div className={`gst-preview-row${strong ? ' gst-preview-strong' : ''}`}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+function GstPreview({ form }) {
+  const g = productGst({
+    price: form.price,
+    sgstRate: form.sgstRate,
+    cgstRate: form.cgstRate,
+    igstRate: form.igstRate,
+  });
+  return (
+    <div className="gst-preview" aria-live="polite">
+      <dl>
+        <PreviewRow label="Price including GST" value={formatCurrency(g.mrp)} />
+        <PreviewRow label="Taxable value" value={formatCurrency(g.taxableValue)} />
+        <PreviewRow label={`SGST (${formatRate(g.sgstRate)})`} value={formatCurrency(g.sgstAmount)} />
+        <PreviewRow label={`CGST (${formatRate(g.cgstRate)})`} value={formatCurrency(g.cgstAmount)} />
+        <PreviewRow label={`IGST (${formatRate(g.igstRate)})`} value={formatCurrency(g.igstAmount)} />
+        <PreviewRow label="Total GST included" value={formatCurrency(g.gstIncluded)} strong />
+      </dl>
+      {g.interGstIncluded !== null && (
+        <p className="field-hint" style={{ marginTop: '0.4rem' }}>
+          Sold to another state, IGST {formatRate(g.interIgstRate)} applies instead (not SGST + CGST):{' '}
+          {formatCurrency(g.interGstIncluded)} GST included.
+        </p>
+      )}
+    </div>
+  );
+}
 
 function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel, onUploadImage, error }) {
   const { isAdmin, isManager } = useAuth();
@@ -40,6 +126,9 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const [touched, setTouched] = useState({});
+  const errors = useMemo(() => validateForm(form), [form]);
+  const hasErrors = Object.keys(errors).length > 0;
 
   // Whenever the modal opens (or the product being edited changes),
   // reset the form fields accordingly.
@@ -53,25 +142,65 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
         price: product.price ?? 0,
         lowStockThreshold: product.lowStockThreshold ?? 10,
         barcode: product.barcode || '',
+        sgstRate: product.sgstRate ?? 0,
+        cgstRate: product.cgstRate ?? 0,
+        igstRate: product.igstRate ?? 0,
       });
+      // Editing: show problems straight away (e.g. an old product that is
+      // already above the new limits) instead of waiting for a click.
+      setTouched({ quantity: true, price: true });
     } else {
       setForm(emptyForm);
+      setTouched({});
     }
   }, [product, open]);
 
+  // Fires for typing, pasting AND browser autofill (all of them dispatch a
+  // change event), so every route into the field is validated the same way.
   const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    const { value } = e.target;
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
   };
+
+  const handleBlur = (field) => () => setTouched((prev) => ({ ...prev, [field]: true }));
+
+  // Error text + red border only once the person has interacted with the
+  // field; the red styling disappears on its own as soon as the value is fixed.
+  const fieldError = (field) => (touched[field] ? errors[field] : undefined);
+  const inputProps = (field) => ({
+    className: fieldError(field) ? 'input-invalid' : undefined,
+    'aria-invalid': fieldError(field) ? 'true' : undefined,
+    'aria-describedby': fieldError(field) ? `err-${field}` : undefined,
+    onBlur: handleBlur(field),
+  });
+  const renderError = (field) =>
+    fieldError(field) ? (
+      <span id={`err-${field}`} className="field-error" role="alert">
+        {fieldError(field)}
+      </span>
+    ) : null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Last line of defence on the client: never submit while anything is invalid.
+    if (hasErrors) {
+      setTouched({
+        name: true, category: true, supplier: true, quantity: true, price: true,
+        lowStockThreshold: true, sgstRate: true, cgstRate: true, igstRate: true,
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = {
         ...form,
-        quantity: Number(form.quantity),
-        price: Number(form.price),
+        quantity: parseQuantity(form.quantity).value,
+        price: parsePrice(form.price).value,
         lowStockThreshold: Number(form.lowStockThreshold),
+        sgstRate: Number(form.sgstRate) || 0,
+        cgstRate: Number(form.cgstRate) || 0,
+        igstRate: Number(form.igstRate) || 0,
       };
       // Only send barcode if it's actually editable in this session -
       // avoids Staff accidentally re-sending a read-only value that the
@@ -127,7 +256,7 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
           </div>
         )}
 
-        <form className="modal-form" onSubmit={handleSubmit}>
+        <form className="modal-form" onSubmit={handleSubmit} noValidate>
           {/* SKU is always read-only. Barcode is editable for
               Admin/Manager only - Staff still sees it read-only. Both
               hidden entirely while adding a new product. */}
@@ -149,10 +278,11 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
           )}
 
           <label>Name</label>
-          <input value={form.name} onChange={handleChange('name')} required />
+          <input value={form.name} onChange={handleChange('name')} required {...inputProps('name')} />
+          {renderError('name')}
 
           <label>Category</label>
-          <select value={form.category} onChange={handleChange('category')} required>
+          <select value={form.category} onChange={handleChange('category')} required {...inputProps('category')}>
             <option value="" disabled>
               Select a category
             </option>
@@ -162,9 +292,10 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
               </option>
             ))}
           </select>
+          {renderError('category')}
 
           <label>Supplier</label>
-          <select value={form.supplier} onChange={handleChange('supplier')} required>
+          <select value={form.supplier} onChange={handleChange('supplier')} required {...inputProps('supplier')}>
             <option value="" disabled>
               Select a supplier
             </option>
@@ -174,39 +305,83 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
               </option>
             ))}
           </select>
+          {renderError('supplier')}
 
           <div className="form-row">
             <div>
-              <label>Quantity</label>
+              <label htmlFor="pf-quantity">Quantity</label>
               <input
+                id="pf-quantity"
                 type="number"
+                inputMode="numeric"
                 min="0"
+                max={MAX_QUANTITY}
+                step="1"
                 value={form.quantity}
                 onChange={handleChange('quantity')}
+                onKeyDown={blockNonNumericKeys}
                 required
+                {...inputProps('quantity')}
               />
+              {renderError('quantity') || <span className="field-hint">0 to {MAX_QUANTITY} units</span>}
             </div>
             <div>
-              <label>Price (₹)</label>
+              <label htmlFor="pf-price">MRP incl. GST (₹)</label>
               <input
+                id="pf-price"
                 type="number"
-                min="0"
+                inputMode="decimal"
+                min="0.01"
+                max={MAX_PRICE}
                 step="0.01"
                 value={form.price}
                 onChange={handleChange('price')}
+                onKeyDown={blockNonNumericKeys}
+                placeholder="e.g. 85000"
                 required
+                {...inputProps('price')}
               />
+              {renderError('price') || (
+                <span className="field-hint">Up to {formatCurrency(MAX_PRICE)}</span>
+              )}
             </div>
           </div>
 
-          <label>Low Stock Threshold</label>
+          <label htmlFor="pf-threshold">Low Stock Threshold</label>
           <input
+            id="pf-threshold"
             type="number"
             min="0"
+            step="1"
             value={form.lowStockThreshold}
             onChange={handleChange('lowStockThreshold')}
+            onKeyDown={blockNonNumericKeys}
             required
+            {...inputProps('lowStockThreshold')}
           />
+          {renderError('lowStockThreshold')}
+
+          {/* GST: stored per product and added automatically on every bill.
+              The preview shows exactly what one unit will carry. */}
+          <label style={{ marginTop: '1.1rem' }}>GST rates (already included in the MRP)</label>
+          <div className="form-row">
+            <div>
+              <label htmlFor="gst-sgst" className="field-label-sm">SGST %</label>
+              <input id="gst-sgst" type="number" min="0" max="100" step="0.01" value={form.sgstRate} onChange={handleChange('sgstRate')} {...inputProps('sgstRate')} />
+              {renderError('sgstRate')}
+            </div>
+            <div>
+              <label htmlFor="gst-cgst" className="field-label-sm">CGST %</label>
+              <input id="gst-cgst" type="number" min="0" max="100" step="0.01" value={form.cgstRate} onChange={handleChange('cgstRate')} {...inputProps('cgstRate')} />
+              {renderError('cgstRate')}
+            </div>
+            <div>
+              <label htmlFor="gst-igst" className="field-label-sm">IGST %</label>
+              <input id="gst-igst" type="number" min="0" max="100" step="0.01" value={form.igstRate} onChange={handleChange('igstRate')} {...inputProps('igstRate')} />
+              {renderError('igstRate')}
+            </div>
+          </div>
+          <GstPreview form={{ ...form, price: errors.price ? 0 : form.price }} />
 
           {!product && (
             <p className="page-subtitle" style={{ marginTop: '-0.5rem' }}>
@@ -218,7 +393,7 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
             <Button variant="secondary" type="button" onClick={onCancel}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={submitting}>
+            <Button variant="primary" type="submit" disabled={submitting || hasErrors}>
               {submitting ? 'Saving...' : product ? 'Save Changes' : 'Add Product'}
             </Button>
           </div>

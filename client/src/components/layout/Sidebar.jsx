@@ -14,6 +14,7 @@
 // Routes and role checks are unchanged: Purchases and the Admin/Management
 // group are Admin + Manager; Activity Logs and Settings are Admin only.
 
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -34,8 +35,8 @@ import {
   Settings,
   UserRound,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { roleLabel } from '../../utils/roleLabel';
@@ -48,45 +49,89 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
   ''
 );
 
-function SidebarLink({ to, icon: Icon, label, onClick, children }) {
+// `badge` (optional) is a count shown right beside the label - e.g. the number
+// of active stock alerts. It sits OUTSIDE the text span so the text's
+// ellipsis/clipping can never cut it off. `data-label` feeds the collapsed-mode
+// tooltip (see Sidebar below).
+function SidebarLink({ to, icon: Icon, label, onClick, badge, children }) {
   return (
-    <NavLink to={to} className={navLinkClass} onClick={onClick} title={label}>
+    <NavLink to={to} className={navLinkClass} onClick={onClick} data-label={label}>
       <span className="sidebar-link-icon" aria-hidden="true">
         <Icon {...ICON} />
       </span>
       <span className="sidebar-link-text">{children}</span>
+      {badge > 0 && (
+        <span className="nav-badge" title={`${badge} active stock ${badge === 1 ? 'alert' : 'alerts'}`}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </NavLink>
   );
 }
 
 function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onToggleCollapse }) {
   const { user, isAdmin, isManager, logout } = useAuth();
+  // Tooltip for the icon-only (collapsed) sidebar. The sidebar clips anything
+  // that sticks out of it, so the tooltip is drawn with position: fixed from
+  // the hovered/focused link's on-screen position. One handler on <nav> covers
+  // every link (mouse hover AND keyboard focus).
+  const [tip, setTip] = useState(null);
+
+  const showTip = (e) => {
+    if (!collapsed || !window.matchMedia('(min-width: 901px)').matches) return;
+    const link = e.target.closest?.('.sidebar-link');
+    if (!link) {
+      setTip(null);
+      return;
+    }
+    const rect = link.getBoundingClientRect();
+    setTip({ label: link.dataset.label, top: rect.top + rect.height / 2, left: rect.right + 10 });
+  };
+  const hideTip = () => setTip(null);
 
   return (
     <>
       {/* Dimmed backdrop on mobile when the drawer is open */}
       {open && <div className="sidebar-backdrop" onClick={onClose} />}
 
-      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Main navigation">
-        {/* Desktop-only collapse handle (hidden on mobile via CSS) */}
-        {onToggleCollapse && (
-          <button
-            type="button"
-            className="sidebar-collapse-toggle"
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <ChevronRight size={14} strokeWidth={2} /> : <ChevronLeft size={14} strokeWidth={2} />}
-          </button>
-        )}
-
-        <div className="sidebar-brand">
-          <span className="sidebar-brand-mark">IM</span>
-          {!collapsed && <span className="sidebar-brand-text">Inventory Manager</span>}
+      <aside
+        id="app-sidebar"
+        className={`sidebar ${open ? 'sidebar-open' : ''}`}
+        aria-label="Main navigation"
+      >
+        {/* Header row: logo + name on the left, collapse button on the right.
+            The button lives INSIDE the sidebar (fully visible, never poking
+            into the page); in the collapsed rail it drops below the logo.
+            It is hidden on mobile, where the navbar's menu button opens the
+            drawer instead. */}
+        <div className="sidebar-header">
+          <div className="sidebar-brand">
+            <span className="sidebar-brand-mark">IM</span>
+            <span className="sidebar-brand-text">Inventory Manager</span>
+          </div>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              className="sidebar-collapse-toggle"
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
+              aria-controls="app-sidebar"
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <PanelLeftOpen size={16} strokeWidth={1.75} /> : <PanelLeftClose size={16} strokeWidth={1.75} />}
+            </button>
+          )}
         </div>
 
-        <nav className="sidebar-nav">
+        <nav
+          className="sidebar-nav"
+          onMouseOver={showTip}
+          onFocus={showTip}
+          onMouseLeave={hideTip}
+          onBlur={hideTip}
+          onScroll={hideTip}
+        >
           <p className="sidebar-section-label">Overview</p>
           <SidebarLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={onClose}>
             Dashboard
@@ -113,9 +158,14 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
               Purchases
             </SidebarLink>
           )}
-          <SidebarLink to="/alerts" icon={CircleAlert} label="Stock Alerts" onClick={onClose}>
+          <SidebarLink
+            to="/alerts"
+            icon={CircleAlert}
+            label="Stock Alerts"
+            onClick={onClose}
+            badge={activeAlertsCount}
+          >
             Stock Alerts
-            {activeAlertsCount > 0 && <span className="nav-badge">{activeAlertsCount}</span>}
           </SidebarLink>
 
           <p className="sidebar-section-label">Sales</p>
@@ -172,19 +222,23 @@ function Sidebar({ activeAlertsCount = 0, open, onClose, collapsed = false, onTo
               <span>{user?.name?.[0]?.toUpperCase() || '?'}</span>
             )}
           </div>
-          {!collapsed && (
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{user?.name}</span>
-              <span className="sidebar-user-role">{roleLabel(user?.role)}</span>
-            </div>
-          )}
-          {!collapsed && (
-            <button type="button" className="sidebar-logout-btn" onClick={logout} aria-label="Log out" title="Log out">
-              <LogOut size={16} strokeWidth={1.75} />
-            </button>
-          )}
+          {/* Always rendered; CSS hides them in the collapsed rail (so they
+              animate instead of popping, and the mobile drawer always has them). */}
+          <div className="sidebar-user-info">
+            <span className="sidebar-user-name">{user?.name}</span>
+            <span className="sidebar-user-role">{roleLabel(user?.role)}</span>
+          </div>
+          <button type="button" className="sidebar-logout-btn" onClick={logout} aria-label="Log out" title="Log out">
+            <LogOut size={16} strokeWidth={1.75} />
+          </button>
         </div>
       </aside>
+
+      {tip && collapsed && (
+        <div className="sidebar-tooltip" role="tooltip" style={{ top: tip.top, left: tip.left }}>
+          {tip.label}
+        </div>
+      )}
     </>
   );
 }

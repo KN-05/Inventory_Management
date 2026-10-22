@@ -24,7 +24,7 @@ function ProductFilters({
   onSortChange,
 }) {
   return (
-    <div className="filters-bar">
+    <div className="filters-bar products-filters">
       <div className="filters-search-wrap">
         <span className="filters-search-icon" aria-hidden="true">
           <Search {...ICON_SM} />

@@ -29,10 +29,14 @@ const purchaseValidationRules = [
   body('supplier').notEmpty().withMessage('Supplier is required'),
   body('items').isArray({ min: 1 }).withMessage('At least one product line item is required'),
   body('items.*.product').notEmpty().withMessage('Each line item needs a product'),
-  body('items.*.quantity').isInt({ min: 1 }).withMessage('Each line item quantity must be at least 1'),
+  // LIMITS: a single line can never carry more than the 1000-unit stock cap,
+  // and no price may exceed Rs 1,00,00,000.
+  body('items.*.quantity')
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Each line item quantity must be a whole number between 1 and 1000'),
   body('items.*.purchasePrice')
-    .isFloat({ min: 0 })
-    .withMessage('Each line item purchase price must be 0 or greater'),
+    .isFloat({ min: 0, max: 10000000 })
+    .withMessage('Each line item purchase price must be between 0 and ₹1,00,00,000. Maximum product price allowed is ₹1,00,00,000.'),
   body('discount').optional().isFloat({ min: 0 }).withMessage('Discount must be 0 or greater'),
   body('tax').optional().isFloat({ min: 0 }).withMessage('Tax must be 0 or greater'),
 ];

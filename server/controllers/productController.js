@@ -12,6 +12,35 @@ const StockAlert = require('../models/StockAlert');
 const StockMovement = require('../models/StockMovement');
 const Category = require('../models/Category');
 const Supplier = require('../models/Supplier');
+const { parsePrice, parseQuantity, parseStockAmount } = require('../utils/productLimits');
+const { applyStockChange } = require('../utils/stockService');
+
+// LIMITS: server-side gate for the two numeric fields that must stay inside
+// the business limits (price 0.01..1,00,00,000, quantity integer 0..1000).
+// The route's express-validator rules already check these; this repeats the
+// check inside the controller so no code path can reach the database with an
+// unchecked value. It never clamps or rounds - invalid input is rejected with
+// a 400 and a clear message. Returns the parsed numbers.
+function requireValidPriceAndQuantity(res, { price, quantity }, { partial = false } = {}) {
+  const out = {};
+  if (!partial || price !== undefined) {
+    const parsed = parsePrice(price);
+    if (!parsed.ok) {
+      res.status(400);
+      throw new Error(parsed.message);
+    }
+    out.price = parsed.value;
+  }
+  if (!partial || quantity !== undefined) {
+    const parsed = parseQuantity(quantity);
+    if (!parsed.ok) {
+      res.status(400);
+      throw new Error(parsed.message);
+    }
+    out.quantity = parsed.value;
+  }
+  return out;
+}
 
 // @desc   Get all products, with optional search + filters
 // @route  GET /api/products?search=&sku=&category=&supplier=&status=&page=&limit=
@@ -90,7 +119,8 @@ const getProductById = asyncHandler(async (req, res) => {
 // all - they're generated here so every product gets a guaranteed-unique
 // identifier without relying on the person filling in the form correctly.
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, category, quantity, price, supplier, lowStockThreshold } = req.body;
+  const { name, category, supplier, lowStockThreshold, sgstRate, cgstRate, igstRate } = req.body;
+  const { quantity, price } = requireValidPriceAndQuantity(res, req.body);
 
   const categoryDoc = await Category.findById(category);
   const sku = await generateUniqueSku(categoryDoc?.name, name);
@@ -105,6 +135,9 @@ const createProduct = asyncHandler(async (req, res) => {
     price,
     supplier,
     lowStockThreshold,
+    sgstRate,
+    cgstRate,
+    igstRate,
   });
 
   await logActivity(req.user._id, `Created product "${product.name}" (SKU: ${product.sku})`, 'product');
@@ -133,14 +166,19 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error('Product not found');
   }
 
-  const { name, category, quantity, price, supplier, lowStockThreshold, barcode } = req.body;
+  const { name, category, supplier, lowStockThreshold, barcode, sgstRate, cgstRate, igstRate } = req.body;
+  // LIMITS: validated BEFORE anything is assigned to the document.
+  const limits = requireValidPriceAndQuantity(res, req.body, { partial: true });
 
   if (name !== undefined) product.name = name;
   if (category !== undefined) product.category = category;
-  if (quantity !== undefined) product.quantity = quantity;
-  if (price !== undefined) product.price = price;
+  if (limits.quantity !== undefined) product.quantity = limits.quantity;
+  if (limits.price !== undefined) product.price = limits.price;
   if (supplier !== undefined) product.supplier = supplier;
   if (lowStockThreshold !== undefined) product.lowStockThreshold = lowStockThreshold;
+  if (sgstRate !== undefined) product.sgstRate = sgstRate;
+  if (cgstRate !== undefined) product.cgstRate = cgstRate;
+  if (igstRate !== undefined) product.igstRate = igstRate;
 
   // PHASE 30: barcode is editable, but only for Admin/Manager, and only
   // if it actually changed (avoids an unnecessary uniqueness query on
@@ -250,27 +288,27 @@ const deleteProduct = asyncHandler(async (req, res) => {
 // Purchase-driven increases - answering "why did stock change?" no
 // matter how it changed.
 const increaseStock = asyncHandler(async (req, res) => {
-  const { amount } = req.body;
-
-  if (!amount || amount <= 0) {
+  const parsedAmount = parseStockAmount(req.body.amount);
+  if (!parsedAmount.ok) {
     res.status(400);
-    throw new Error('Amount must be a positive number');
+    throw new Error(parsedAmount.message);
   }
+  const amount = parsedAmount.value;
 
-  const product = await Product.findById(req.params.id);
-  if (!product) {
-    res.status(404);
-    throw new Error('Product not found');
+  // LIMITS: the "final stock <= 1000" rule is part of the atomic database
+  // update (see utils/stockService.js), so concurrent requests cannot push
+  // the stock over the limit. Example: stock 900 + 200 -> rejected.
+  const result = await applyStockChange(req.params.id, amount);
+  if (result.error) {
+    res.status(result.error.status);
+    throw new Error(result.error.message);
   }
-
-  const previousStock = product.quantity;
-  product.quantity += Number(amount);
-  await product.save(); // status recalculated automatically
+  const { product, previousStock } = result;
 
   await StockMovement.create({
     product: product._id,
     type: 'ADJUSTMENT',
-    quantity: Number(amount),
+    quantity: amount,
     previousStock,
     newStock: product.quantity,
     reason: 'Manual stock increase',
@@ -293,32 +331,25 @@ const increaseStock = asyncHandler(async (req, res) => {
 //
 // PHASE 7: same StockMovement logging as increaseStock above.
 const decreaseStock = asyncHandler(async (req, res) => {
-  const { amount } = req.body;
-
-  if (!amount || amount <= 0) {
+  const parsedAmount = parseStockAmount(req.body.amount);
+  if (!parsedAmount.ok) {
     res.status(400);
-    throw new Error('Amount must be a positive number');
+    throw new Error(parsedAmount.message);
   }
+  const amount = parsedAmount.value;
 
-  const product = await Product.findById(req.params.id);
-  if (!product) {
-    res.status(404);
-    throw new Error('Product not found');
+  // Atomic as well: the database refuses to go below 0 even under concurrency.
+  const result = await applyStockChange(req.params.id, -amount);
+  if (result.error) {
+    res.status(result.error.status);
+    throw new Error(result.error.message);
   }
-
-  if (product.quantity - amount < 0) {
-    res.status(400);
-    throw new Error('Cannot decrease stock below 0');
-  }
-
-  const previousStock = product.quantity;
-  product.quantity -= Number(amount);
-  await product.save(); // status recalculated automatically
+  const { product, previousStock } = result;
 
   await StockMovement.create({
     product: product._id,
     type: 'ADJUSTMENT',
-    quantity: -Number(amount), // negative: stock going OUT
+    quantity: -amount, // negative: stock going OUT
     previousStock,
     newStock: product.quantity,
     reason: 'Manual stock decrease',
@@ -356,7 +387,11 @@ const getProductStockMovements = asyncHandler(async (req, res) => {
 //
 // PHASE 13: expects a multipart/form-data request with a single file field
 // named "file" (handled by multer in the route). Expected CSV columns:
-//   name, sku (optional), category, supplier, quantity, price, lowStockThreshold
+//   name, sku (optional), category, supplier, quantity, price, lowStockThreshold,
+//   sgstRate / cgstRate / igstRate (all optional, percent, default 0)
+// LIMITS: quantity must be an integer 0..1000 and price 0.01..1,00,00,000 (plain
+// number, max 2 decimals, no thousands separators). Rows that break this are
+// rejected with the product name + field; the rest of the file still imports.
 // `category` and `supplier` are matched by NAME (case-insensitive) against
 // existing Categories/Suppliers - they are NOT auto-created, so a typo in
 // the CSV shows up as a clear per-row error instead of silently creating
@@ -420,9 +455,10 @@ const importProducts = asyncHandler(async (req, res) => {
     const explicitSku = row.sku?.trim()?.toUpperCase() || '';
     const categoryName = row.category?.trim();
     const supplierName = row.supplier?.trim();
-    const quantity = Number(row.quantity);
-    const price = Number(row.price);
     const lowStockThreshold = row.lowStockThreshold ? Number(row.lowStockThreshold) : 10;
+    const sgstRate = row.sgstRate ? Number(row.sgstRate) : 0;
+    const cgstRate = row.cgstRate ? Number(row.cgstRate) : 0;
+    const igstRate = row.igstRate ? Number(row.igstRate) : 0;
 
     // Validate required fields are present and sensible before touching the DB
     if (!name || !categoryName || !supplierName) {
@@ -430,14 +466,38 @@ const importProducts = asyncHandler(async (req, res) => {
       errors.push({ row: rowNum, type: 'invalid', reason: 'Missing name, category, or supplier' });
       continue;
     }
-    if (Number.isNaN(quantity) || quantity < 0) {
+    // LIMITS: quantity 0..1000 (integer) and price 0.01..1,00,00,000 are enforced
+    // for every imported row. A bad row is reported with the product name and
+    // the exact field, and is never clamped or silently corrected.
+    const quantityResult = parseQuantity(row.quantity);
+    if (!quantityResult.ok) {
       results.failed++;
-      errors.push({ row: rowNum, type: 'invalid', reason: 'Quantity must be a number 0 or greater' });
+      errors.push({
+        row: rowNum,
+        type: 'invalid',
+        product: name,
+        field: 'quantity',
+        reason: `Product "${name}" - invalid quantity "${row.quantity ?? ''}". ${quantityResult.message}`,
+      });
       continue;
     }
-    if (Number.isNaN(price) || price < 0) {
+    const priceResult = parsePrice(row.price);
+    if (!priceResult.ok) {
       results.failed++;
-      errors.push({ row: rowNum, type: 'invalid', reason: 'Price must be a number 0 or greater' });
+      errors.push({
+        row: rowNum,
+        type: 'invalid',
+        product: name,
+        field: 'price',
+        reason: `Product "${name}" - invalid price "${row.price ?? ''}". ${priceResult.message}`,
+      });
+      continue;
+    }
+    const quantity = quantityResult.value;
+    const price = priceResult.value;
+    if ([sgstRate, cgstRate, igstRate].some((r) => Number.isNaN(r) || r < 0 || r > 100)) {
+      results.failed++;
+      errors.push({ row: rowNum, type: 'invalid', reason: 'sgstRate, cgstRate and igstRate must each be between 0 and 100' });
       continue;
     }
 
@@ -508,12 +568,15 @@ const importProducts = asyncHandler(async (req, res) => {
         quantity,
         price,
         lowStockThreshold,
+        sgstRate,
+        cgstRate,
+        igstRate,
       });
       skusSeenInThisFile.add(sku);
       results.created++;
     } catch (err) {
       results.failed++;
-      errors.push({ row: rowNum, type: 'invalid', reason: err.message });
+      errors.push({ row: rowNum, type: 'invalid', product: name, reason: `Product "${name}" - ${err.message}` });
     }
   }
 
@@ -579,6 +642,9 @@ const exportProducts = asyncHandler(async (req, res) => {
     { key: 'quantity', label: 'Quantity' },
     { key: 'lowStockThreshold', label: 'Low Stock Threshold' },
     { key: 'price', label: 'Price' },
+    { key: 'sgstRate', label: 'SGST %' },
+    { key: 'cgstRate', label: 'CGST %' },
+    { key: 'igstRate', label: 'IGST %' },
     { key: 'status', label: 'Status' },
   ]);
 

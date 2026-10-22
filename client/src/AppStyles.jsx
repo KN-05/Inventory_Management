@@ -1697,23 +1697,32 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   padding: 1rem 0.75rem;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; /* header + user card stay pinned; only .sidebar-nav scrolls */
   z-index: 40;
   transition: width var(--dur-base) var(--ease-out);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem 1.25rem;
+  flex-shrink: 0;
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.5rem 0.6rem 1.25rem;
+  min-width: 0;
 }
 
 .sidebar-brand-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 30px;
   height: 30px;
   border-radius: 7px;
@@ -1730,6 +1739,11 @@ a:focus-visible {
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  transition: max-width var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease;
 }
 
 .sidebar-nav {
@@ -1737,15 +1751,26 @@ a:focus-visible {
   flex-direction: column;
   gap: 0.15rem;
   flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
 .sidebar-section-label {
   margin: 1rem 0.6rem 0.35rem;
+  height: 1rem;
+  line-height: 1rem;
+  overflow: hidden;
+  white-space: nowrap;
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--sidebar-section-label);
+  transition: height var(--dur-base) var(--ease-out), margin var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) ease;
 }
 
 .sidebar-nav .sidebar-section-label:first-child {
@@ -1755,6 +1780,7 @@ a:focus-visible {
 .sidebar-link {
   display: flex;
   align-items: center;
+  position: relative;
   gap: 0.5rem;
   padding: 0.5rem 0.6rem;
   border-radius: var(--radius-sm);
@@ -1789,82 +1815,146 @@ a:focus-visible {
 }
 
 .sidebar-link-text {
+  min-width: 0;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: max-width var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease;
 }
 
-/* PHASE: desktop-collapsible sidebar - a small floating handle sitting
-   on the sidebar's right edge (half in/half out), matching the classic
-   Notion/Linear-style collapse affordance. Desktop only - mobile uses
-   the hamburger + slide-over drawer instead (see .navbar-menu-btn). */
+/* Collapse / expand button. It sits in the sidebar header (fully inside the
+   sidebar, so nothing is clipped or pokes into the page). Hidden on mobile,
+   where the navbar menu button opens the drawer instead. */
 .sidebar-collapse-toggle {
-  position: absolute;
-  top: 22px;
-  right: -12px;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--color-surface);
-  box-shadow: var(--neu-shadow);
-  border: none;
-  color: var(--color-text-secondary);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 41;
-  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
 }
 
 .sidebar-collapse-toggle:hover {
-  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+.sidebar-collapse-toggle:focus-visible {
+  outline: 2px solid var(--sidebar-accent, #fff);
+  outline-offset: 2px;
+}
+
+/* Tooltip for the icon-only sidebar (positioned by Sidebar.jsx) */
+.sidebar-tooltip {
+  position: fixed;
+  transform: translateY(-50%);
+  z-index: 60;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {
-  .sidebar-collapse-toggle {
+  .sidebar-collapse-toggle,
+  .sidebar-tooltip {
     display: none;
   }
 }
 
+/* Collapsed rail (desktop only). The width comes from --sidebar-width, which
+   both .sidebar and .app-main already read - so the page content follows the
+   sidebar automatically, with the same transition. */
 @media (min-width: 901px) {
-  .app-shell.sidebar-collapsed .app-main {
-    margin-left: 72px;
+  .app-shell.sidebar-collapsed {
+    --sidebar-width: 72px;
   }
 
   .app-shell.sidebar-collapsed .sidebar {
-    width: 72px;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
   }
 
-  .app-shell.sidebar-collapsed .sidebar-brand {
+  /* logo on top, toggle button underneath, both centered */
+  .app-shell.sidebar-collapsed .sidebar-header {
+    flex-direction: column;
     justify-content: center;
+    gap: 0.6rem;
     padding-left: 0;
     padding-right: 0;
   }
 
   .app-shell.sidebar-collapsed .sidebar-brand-text,
-  .app-shell.sidebar-collapsed .sidebar-section-label,
   .app-shell.sidebar-collapsed .sidebar-link-text,
-  .app-shell.sidebar-collapsed .sidebar-user-info,
-  .app-shell.sidebar-collapsed .nav-badge {
-    display: none;
+  .app-shell.sidebar-collapsed .sidebar-user-info {
+    max-width: 0;
+    flex: 0 0 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  /* headings collapse into a thin divider between groups */
+  .app-shell.sidebar-collapsed .sidebar-section-label {
+    height: 1px;
+    margin: 0.6rem 0.6rem;
+    font-size: 0;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-nav .sidebar-section-label:first-child {
+    height: 0;
+    margin: 0;
+    background: none;
   }
 
   .app-shell.sidebar-collapsed .sidebar-link {
     justify-content: center;
+    gap: 0;
     padding-left: 0;
     padding-right: 0;
   }
 
+  /* the alerts count becomes a small dot on the icon's top-right corner */
+  .app-shell.sidebar-collapsed .nav-badge {
+    position: absolute;
+    top: 6px;
+    left: calc(50% + 5px);
+    min-width: 0;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    margin: 0;
+    font-size: 0;
+    box-shadow: 0 0 0 2px var(--sidebar-gradient);
+  }
+
   .app-shell.sidebar-collapsed .sidebar-user-card {
     justify-content: center;
+    gap: 0;
     padding-left: 0;
     padding-right: 0;
   }
 
   .app-shell.sidebar-collapsed .sidebar-logout-btn {
-    display: none;
+    width: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
   }
 }
 
@@ -3179,19 +3269,37 @@ button:disabled {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 1rem;
+  align-items: stretch;
 }
 
-/* PHASE: dashboard polish - centers a "42 Products" total inside the
-   donut chart's hole, positioned over the ResponsiveContainer below it. */
+/* Both chart cards share one height; the chart sits centered in the body. */
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-panel .panel-header {
+  min-height: 46px;
+}
+
+.chart-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Centers the "42 Products" total inside the donut's hole. */
 .donut-chart-wrap {
   position: relative;
+  width: 100%;
 }
 
 .donut-chart-center {
   position: absolute;
-  top: 42%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
@@ -3202,7 +3310,7 @@ button:disabled {
 
 .donut-chart-center-value {
   font-family: var(--font-mono);
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -3212,7 +3320,64 @@ button:disabled {
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-top: 0.15rem;
+  margin-top: 0.2rem;
+}
+
+/* Legend under the donut: centered, wraps on narrow cards */
+.chart-legend {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.25rem;
+  font-size: 0.82rem;
+}
+
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chart-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-legend-name {
+  color: var(--color-text-secondary);
+}
+
+.chart-legend-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tooltip shared by both charts */
+.chart-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-width: 260px;
+  padding: 0.5rem 0.7rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.chart-tooltip strong {
+  font-weight: 600;
+}
+
+.chart-tooltip span {
+  color: var(--color-text-secondary);
 }
 
 .chart-card {
@@ -3235,6 +3400,13 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
+/* Recent activity: icon | who + what | time, one grid per row */
+.activity-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .activity-list {
   list-style: none;
   margin: 0;
@@ -3242,41 +3414,71 @@ button:disabled {
 }
 
 .activity-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-bg);
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--color-border);
   font-size: 0.86rem;
+  line-height: 1.45;
+  transition: background var(--dur-fast) ease;
 }
 
-.activity-text {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.activity-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
+.activity-list li:hover {
+  background: var(--color-primary-bg);
 }
 
 .activity-list li:last-child {
   border-bottom: none;
 }
 
+.activity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.activity-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.activity-user {
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.activity-desc {
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere; /* long emails / invoice numbers wrap instead of overflowing */
+}
+
 .activity-time {
   color: var(--color-text-muted);
   white-space: nowrap;
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.9;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+  .activity-list li {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .activity-time {
+    grid-column: 2;
+    line-height: 1.4;
+    margin-top: 0.15rem;
+  }
 }
 
 /* ==========================================================================
@@ -3315,15 +3517,25 @@ button:disabled {
 }
 
 /* --- Nav badge (active alert count), used in the Sidebar --- */
+/* Count bubble beside a sidebar label (Stock Alerts): compact pill, count
+   centered both ways, same height for 1, 10 or 99+. */
 .nav-badge {
-  display: inline-block;
-  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 0.5rem;
   background: var(--color-danger);
   color: #fff;
   border-radius: 999px;
-  padding: 0.05rem 0.45rem;
   font-size: 0.68rem;
   font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -3764,6 +3976,569 @@ a.kpi:hover {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------------- PHASE 36: billing screen, GST, form fields ---------------- */
+
+/* Reusable stacked form field: label above, consistently styled control. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.field-grow {
+  flex: 1 1 220px;
+}
+
+.field > label,
+.field-label-sm {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.field input,
+.field select,
+.price-input input,
+.qty-stepper input {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.field input:focus,
+.field select:focus,
+.price-input input:focus,
+.qty-stepper input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+.field-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.76rem;
+  color: var(--color-danger);
+}
+
+/* Two-column billing layout: products + cart on the left, a sticky order
+   summary on the right so the total and the Complete Sale button are always
+   in view while the cart grows. Stacks on tablets/phones. */
+.pos-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.pos-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.pos-side {
+  position: sticky;
+  top: calc(var(--navbar-height) + 1rem);
+}
+
+@media (max-width: 1100px) {
+  .pos-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pos-side {
+    position: static;
+  }
+}
+
+.pos-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.pos-add-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.pos-customer-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pos-customer-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-table td {
+  vertical-align: top;
+}
+
+.price-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+}
+
+.price-input input {
+  width: 92px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  text-align: right;
+}
+
+.qty-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.qty-stepper button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  border: none;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.qty-stepper button:hover:not(:disabled) {
+  background: var(--color-border);
+}
+
+.qty-stepper input {
+  width: 46px;
+  padding: 0.35rem 0;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.qty-stepper input::-webkit-outer-spin-button,
+.qty-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.icon-btn:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Order summary (right column) */
+.summary-list {
+  margin: 0;
+  padding: 0.25rem 0 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+.summary-row dt,
+.summary-row dd {
+  margin: 0;
+}
+
+.summary-row dd {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.summary-row-total {
+  margin-top: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-lg {
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+}
+
+/* GST on the Products screens + product form */
+.gst-rates {
+  display: block;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.gst-preview {
+  margin: 0.5rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.gst-preview dl {
+  margin: 0;
+}
+
+.gst-preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.18rem 0;
+}
+
+.gst-preview-row dt,
+.gst-preview-row dd {
+  margin: 0;
+}
+
+.gst-preview-row dd {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.gst-preview-strong {
+  margin-top: 0.2rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Invoice: wide GST table scrolls on small screens, totals sit right. */
+.invoice-table-scroll {
+  overflow-x: auto;
+}
+
+.invoice-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.invoice-payment {
+  flex: 1 1 200px;
+  grid-template-columns: 1fr;
+}
+
+.invoice-totals {
+  flex: 0 1 300px;
+  min-width: 240px;
+}
+
+.invoice-total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-total-strong {
+  margin-top: 0.3rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+@media print {
+  .invoice-table-scroll {
+    overflow: visible;
+  }
+}
+
+/* ==========================================================================
+   Products page layout
+   One container (.products-page) holds the heading, the filters and the
+   table, so all three share exactly the same left/right edges. Everything
+   here is scoped to .products-page / .products-* so no other page changes.
+   ========================================================================== */
+.page.products-page {
+  width: 100%;
+  max-width: 1600px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.products-page .page-header {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem 1rem;
+}
+
+.products-page .page-header > div:last-child {
+  justify-content: flex-end;
+}
+
+/* --- Filters: one responsive grid, every control the same height --- */
+.products-filters {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(150px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.products-filters .filters-search-wrap {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.products-filters select,
+.products-filters .filters-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.products-filters .filters-search-wrap .filters-search {
+  padding-left: 2.1rem;
+}
+
+@media (max-width: 1280px) {
+  .products-filters {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+  .products-filters .filters-search-wrap {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Table: scrolls inside its own container, never the whole page --- */
+.products-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow);
+}
+
+/* (extra class names beat the generic mobile rule that turns every
+   .data-table into a scrolling block - the wrapper scrolls instead) */
+.products-table-wrap .data-table.products-table {
+  display: table;
+  width: 100%;
+  min-width: 1120px;
+  overflow: visible;
+  white-space: normal;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.products-table th,
+.products-table td {
+  padding: 0.8rem 0.85rem;
+  vertical-align: middle;
+}
+
+.products-table thead th {
+  white-space: nowrap;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.products-table tbody td {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.products-table tbody tr {
+  transition: background var(--dur-fast) ease;
+}
+
+.products-table tbody tr:hover {
+  background: var(--color-primary-bg);
+}
+
+.products-table .cell-nowrap {
+  white-space: nowrap;
+}
+
+.products-table td.cell-name {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* the GST column holds two short lines (rates + amount) - allow it to wrap */
+.products-table th:nth-child(9),
+.products-table td:nth-child(9) {
+  min-width: 170px;
+}
+
+.products-table td:nth-child(9) .gst-rates,
+.products-table td:nth-child(9) .cell-sub {
+  display: block;
+}
+
+.products-table .actions-cell {
+  white-space: nowrap;
+}
+
+.products-table .row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: nowrap;
+}
+
+.products-table .btn-link {
+  margin-right: 0;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.products-table .btn-link:hover:not(:disabled) {
+  background: var(--color-primary-bg);
+  text-decoration: none;
+}
+
+.products-table .btn-link-danger:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+}
+
+/* Stock status: In Stock = green, Low Stock = orange, Out of Stock = red */
+.products-table .badge {
+  white-space: nowrap;
+}
+
+.products-table .badge-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.products-table .badge-yellow {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.products-table .badge-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.products-table .stock-adjust-error {
+  white-space: normal;
+  max-width: 260px;
+}
+
+.cell-over-limit {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .products-page .page-header > div:last-child {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* --- Invalid form fields (red border, removed automatically when fixed) --- */
+input.input-invalid,
+select.input-invalid,
+.modal-form input.input-invalid,
+.modal-form select.input-invalid,
+.stock-adjust input.input-invalid {
+  box-shadow: inset 0 0 0 1.5px var(--color-danger);
+}
+
+input.input-invalid:focus-visible,
+select.input-invalid:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--color-danger), 0 0 0 3px var(--color-danger-bg);
+}
+
+.modal-form .field-hint {
+  margin-top: 0.25rem;
+}
+
+.modal-form .field-error {
+  min-height: 1em;
 }
 
 `;

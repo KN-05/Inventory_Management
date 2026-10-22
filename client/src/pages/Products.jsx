@@ -235,7 +235,9 @@ function Products() {
   };
 
   return (
-    <div className="page">
+    // `products-page` makes the heading, filters and table share ONE full-width
+    // container (see the "Products page layout" block in AppStyles.jsx).
+    <div className="page products-page">
       <PageHeader
         title="Products"
         subtitle="Your full inventory catalog"

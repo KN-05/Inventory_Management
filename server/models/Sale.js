@@ -33,11 +33,34 @@ const saleItemSchema = new mongoose.Schema(
       required: true,
       min: [0, 'Selling price cannot be negative'],
     },
+    // subtotal = quantity x sellingPrice. sellingPrice is the MRP INCLUDING
+    // GST, so this is a GST-inclusive amount, before any bill discount.
     subtotal: {
       type: Number,
       required: true,
       min: 0,
     },
+    // GST snapshot, calculated by utils/gst.js when the sale is created. The
+    // rates are the ones actually APPLIED to this sale (SGST+CGST within the
+    // state, or IGST to another state - never both) and are copied from the
+    // product at that moment, so a past bill never changes if the product's
+    // GST rate is edited later.
+    //   taxableValue = amount payable for the line x 100 / (100 + GST rate)
+    //   gstTotal     = GST INCLUDED in the amount payable (not added to it)
+    //   lineTotal    = amount payable for the line (after its discount share)
+    // Sales created before GST support have none of these (they read as 0);
+    // sales from the first GST release (GST added on top) have gstApplied but
+    // no gstMode - see below.
+    discountShare: { type: Number, default: 0, min: 0 },
+    taxableValue: { type: Number, default: 0, min: 0 },
+    sgstRate: { type: Number, default: 0, min: 0 },
+    cgstRate: { type: Number, default: 0, min: 0 },
+    igstRate: { type: Number, default: 0, min: 0 },
+    sgstAmount: { type: Number, default: 0, min: 0 },
+    cgstAmount: { type: Number, default: 0, min: 0 },
+    igstAmount: { type: Number, default: 0, min: 0 },
+    gstTotal: { type: Number, default: 0, min: 0 },
+    lineTotal: { type: Number, default: 0, min: 0 },
   },
   { _id: false }
 );
@@ -74,7 +97,23 @@ const saleSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Tax cannot be negative'],
     },
-    // sum(item.subtotal) - discount + tax. Recalculated server-side.
+    // GST totals for the whole bill. `tax` above is kept (= GST included) so
+    // older code/reports that read `tax` keep working.
+    gstApplied: { type: Boolean, default: false }, // false = legacy sale with a manual `tax` only
+    // 'inclusive' = prices are GST-inclusive MRPs and the amount payable never
+    // changes because of GST. Deliberately NO default: sales saved by the very
+    // first GST release (which added GST on top of the price) have no gstMode,
+    // and must keep being displayed as they were billed.
+    gstMode: { type: String, enum: ['inclusive'] },
+    // Place of supply: 'intra' = within the state (SGST + CGST), 'inter' = to
+    // another state (IGST).
+    supplyType: { type: String, enum: ['intra', 'inter'], default: 'intra' },
+    taxableTotal: { type: Number, default: 0, min: 0 },
+    totalSgst: { type: Number, default: 0, min: 0 },
+    totalCgst: { type: Number, default: 0, min: 0 },
+    totalIgst: { type: Number, default: 0, min: 0 },
+    // Amount payable = sum(item.subtotal) - discount. GST is INSIDE this amount
+    // (taxableTotal + GST included = totalAmount). Recalculated server-side.
     totalAmount: {
       type: Number,
       required: true,

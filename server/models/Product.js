@@ -11,6 +11,13 @@
 // photo upload), since a brand-new product doesn't have an id/file yet.
 
 const mongoose = require('mongoose');
+const {
+  MAX_PRICE,
+  MIN_PRICE,
+  MAX_QUANTITY,
+  MAX_PRICE_MESSAGE,
+  QUANTITY_MESSAGE,
+} = require('../utils/productLimits');
 
 const productSchema = new mongoose.Schema(
   {
@@ -48,16 +55,40 @@ const productSchema = new mongoose.Schema(
       ref: 'Category',
       required: [true, 'Category is required'],
     },
+    // LIMITS: quantity is an integer 0..1000. Mongoose only validates paths
+    // that were modified, so a legacy product that is ALREADY above 1000 is
+    // not blocked when something unrelated saves it - but its quantity may
+    // only stay the same or go DOWN (e.g. a sale), never up.
     quantity: {
       type: Number,
       required: true,
-      min: [0, 'Quantity cannot be negative'],
+      min: [0, QUANTITY_MESSAGE],
       default: 0,
+      validate: [
+        {
+          validator: Number.isInteger,
+          message: QUANTITY_MESSAGE,
+        },
+        {
+          validator: function (value) {
+            if (value <= MAX_QUANTITY) return true;
+            const original = this.$locals?.originalQuantity;
+            return !this.isNew && typeof original === 'number' && original > MAX_QUANTITY && value <= original;
+          },
+          message: QUANTITY_MESSAGE,
+        },
+      ],
     },
+    // LIMITS: price is the MRP including GST, 0.01 .. 1,00,00,000, max 2 decimals.
     price: {
       type: Number,
       required: [true, 'Price is required'],
-      min: [0, 'Price cannot be negative'],
+      min: [MIN_PRICE, 'Price must be greater than zero'],
+      max: [MAX_PRICE, MAX_PRICE_MESSAGE],
+      validate: {
+        validator: (value) => Number.isFinite(value) && Number(value.toFixed(2)) === value,
+        message: 'Price must have at most 2 decimal places.',
+      },
     },
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
@@ -69,6 +100,30 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: [0, 'Threshold cannot be negative'],
       default: 10,
+    },
+    // GST rates in percent, stored per product. `price` above is the MRP
+    // INCLUDING GST: when this product is sold the customer pays exactly that
+    // price, and the GST inside it is worked out from these rates (e.g. MRP
+    // 85,000 with SGST 9 + CGST 9 -> taxable 72,033.90, SGST 6,483.05, CGST
+    // 6,483.05). Default 0 = no GST, so existing products bill exactly as
+    // before until a rate is set on them. See utils/gst.js for the maths.
+    sgstRate: {
+      type: Number,
+      min: [0, 'SGST rate cannot be negative'],
+      max: [100, 'SGST rate cannot exceed 100'],
+      default: 0,
+    },
+    cgstRate: {
+      type: Number,
+      min: [0, 'CGST rate cannot be negative'],
+      max: [100, 'CGST rate cannot exceed 100'],
+      default: 0,
+    },
+    igstRate: {
+      type: Number,
+      min: [0, 'IGST rate cannot be negative'],
+      max: [100, 'IGST rate cannot exceed 100'],
+      default: 0,
     },
     // Automatically derived - see pre('save') hook below.
     status: {
@@ -106,6 +161,12 @@ productSchema.statics.buildBarcodeCandidate = function () {
   const randomPart = Math.floor(100 + Math.random() * 900); // 3 random digits
   return `${timestampPart}${randomPart}`;
 };
+
+// Remember the stock level the document was loaded with (used by the
+// quantity validator above to let legacy over-limit products only go down).
+productSchema.post('init', function (doc) {
+  doc.$locals.originalQuantity = doc.quantity;
+});
 
 // Shared logic so both the pre-save hook AND stock update endpoints
 // (Phase 4) can recalculate status consistently.

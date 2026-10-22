@@ -19,10 +19,11 @@ const saleValidationRules = [
   body('items.*.quantity').isInt({ min: 1 }).withMessage('Each line item quantity must be at least 1'),
   body('items.*.sellingPrice')
     .optional({ nullable: true })
-    .isFloat({ min: 0 })
-    .withMessage('Selling price must be 0 or greater'),
+    .isFloat({ min: 0, max: 10000000 })
+    .withMessage('Selling price must be between 0 and ₹1,00,00,000. Maximum product price allowed is ₹1,00,00,000.'),
   body('discount').optional().isFloat({ min: 0 }).withMessage('Discount must be 0 or greater'),
-  body('tax').optional().isFloat({ min: 0 }).withMessage('Tax must be 0 or greater'),
+  // `tax` is ignored if an old client still sends it - GST is calculated on the server.
+  body('supplyType').optional().isIn(['intra', 'inter']).withMessage('supplyType must be intra or inter'),
   body('paymentMethod')
     .optional()
     .isIn(['Cash', 'Card', 'UPI', 'Bank Transfer', 'Other'])

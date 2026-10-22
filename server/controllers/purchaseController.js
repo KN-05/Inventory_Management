@@ -12,6 +12,7 @@ const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const StockMovement = require('../models/StockMovement');
+const { applyStockChange, findStockLimitViolation } = require('../utils/stockService');
 
 // Recomputes each line item's subtotal + the purchase's totalAmount from
 // scratch, server-side - never trusts totals sent by the client.
@@ -266,17 +267,32 @@ const receivePurchase = asyncHandler(async (req, res) => {
     throw new Error('Cannot receive a cancelled purchase');
   }
 
+  // LIMITS: no product may end above 1000 units. Check EVERY line first (a
+  // product that appears on several lines is added together) so the purchase
+  // is rejected as a whole, before any stock has been touched.
+  const limitViolation = await findStockLimitViolation(
+    purchase.items.map((item) => ({ product: item.product._id || item.product, quantity: item.quantity }))
+  );
+  if (limitViolation) {
+    res.status(400);
+    throw new Error(limitViolation);
+  }
+
   // Sequential on purpose (not Promise.all) - each product save can
   // trigger the stock-alert/notification hook, and going one at a time
   // keeps the resulting activity/notification order predictable and
   // makes a partial failure easy to reason about.
   for (const item of purchase.items) {
-    const product = await Product.findById(item.product._id || item.product); // eslint-disable-line no-await-in-loop
-    if (!product) continue; // product may have been deleted since the purchase was created
-
-    const previousStock = product.quantity;
-    product.quantity += item.quantity;
-    await product.save(); // eslint-disable-line no-await-in-loop -- status/alerts recalculated automatically
+    // applyStockChange is an atomic "add if the result stays <= 1000" update,
+    // so a concurrent stock change cannot push the product over the limit
+    // between the check above and this write.
+    const result = await applyStockChange(item.product._id || item.product, Number(item.quantity)); // eslint-disable-line no-await-in-loop
+    if (result.error && result.error.status === 404) continue; // product may have been deleted since the purchase was created
+    if (result.error) {
+      res.status(result.error.status);
+      throw new Error(result.error.message);
+    }
+    const { product, previousStock } = result;
 
     await StockMovement.create({
       product: product._id,

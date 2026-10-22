@@ -20,7 +20,7 @@
 // doesn't match any product, and a short cooldown per code so holding a
 // barcode in view doesn't add it to the cart dozens of times per second.
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
 import { getProductOptions } from '../api/lookups';
@@ -38,13 +38,46 @@ import Button from '../components/common/Button';
 import BarcodeScannerModal from '../components/common/BarcodeScannerModal';
 import PageHeader from '../components/common/PageHeader';
 import { formatCurrency } from '../utils/formatCurrency';
-import { ReceiptText, ScanBarcode, Search, ShoppingCart } from 'lucide-react';
+import { Minus, Plus, ReceiptText, ScanBarcode, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { ICON_SM } from '../utils/iconProps';
+import { calculateGst, formatRate, uniformRateLabel } from '../utils/gst';
 
 // PHASE 32: ignore the same scanned code if it comes in again within
 // this window - prevents one barcode held in front of the camera from
 // being added to the cart repeatedly while the frame keeps re-decoding it.
 const SCAN_COOLDOWN_MS = 1500;
+
+// "SGST 9% + CGST 9%" / "IGST 18%" / "No GST" - the rates APPLIED to this
+// line (which depend on the place of supply).
+function appliedLabel(line) {
+  const parts = [];
+  if (line.sgstRate > 0) parts.push(`SGST ${formatRate(line.sgstRate)}`);
+  if (line.cgstRate > 0) parts.push(`CGST ${formatRate(line.cgstRate)}`);
+  if (line.igstRate > 0) parts.push(`IGST ${formatRate(line.igstRate)}`);
+  return parts.length ? parts.join(' + ') : 'No GST';
+}
+
+function QtyStepper({ value, max, onChange }) {
+  const n = Number(value) || 0;
+  return (
+    <div className="qty-stepper">
+      <button type="button" aria-label="Decrease quantity" onClick={() => onChange(Math.max(1, n - 1))} disabled={n <= 1}>
+        <Minus size={14} strokeWidth={2} />
+      </button>
+      <input
+        type="number"
+        min="1"
+        max={max}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="Quantity"
+      />
+      <button type="button" aria-label="Increase quantity" onClick={() => onChange(Math.min(max, n + 1))} disabled={n >= max}>
+        <Plus size={14} strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
 
 function Sales() {
   const { isAdmin, isManager } = useAuth();
@@ -61,7 +94,9 @@ function Sales() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [discount, setDiscount] = useState(0);
-  const [tax, setTax] = useState(0);
+  // Place of supply decides the GST structure: within the state = SGST + CGST,
+  // another state = IGST (never both).
+  const [supplyType, setSupplyType] = useState('intra');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentStatus, setPaymentStatus] = useState('paid');
   const [checkoutError, setCheckoutError] = useState('');
@@ -114,17 +149,31 @@ function Sales() {
       )
     : products;
 
+  // Adds one unit. Never lets the cart go past the stock on hand (the
+  // server enforces this too). Returns true if a unit was added, so the
+  // scanner can play the right sound.
   const addToCart = (product) => {
-    if (!product) return;
+    if (!product) return false;
+    const existing = cart.find((line) => line.product._id === product._id);
+    const currentQty = existing ? Number(existing.quantity) || 0 : 0;
+    if (currentQty + 1 > product.quantity) {
+      toast.error(
+        product.quantity > 0
+          ? `Only ${product.quantity} of "${product.name}" in stock`
+          : `"${product.name}" is out of stock`
+      );
+      return false;
+    }
     setCart((prev) => {
-      const existing = prev.find((line) => line.product._id === product._id);
-      if (existing) {
-        return prev.map((line) =>
-          line.product._id === product._id ? { ...line, quantity: line.quantity + 1 } : line
+      const line = prev.find((l) => l.product._id === product._id);
+      if (line) {
+        return prev.map((l) =>
+          l.product._id === product._id ? { ...l, quantity: (Number(l.quantity) || 0) + 1 } : l
         );
       }
       return [...prev, { product, quantity: 1, sellingPrice: product.price }];
     });
+    return true;
   };
 
   const handleAddSelected = () => {
@@ -165,14 +214,23 @@ function Sales() {
       (p) => p.sku?.toLowerCase() === query || p.barcode?.toLowerCase() === query
     );
     if (match) {
-      addToCart(match);
-      playSuccessBeep();
-      toast.success(`Added "${match.name}" to cart`);
+      if (addToCart(match)) {
+        playSuccessBeep();
+        toast.success(`Added "${match.name}" to cart`);
+      } else {
+        playErrorBeep();
+      }
     } else {
       playErrorBeep();
       toast.error(`No product found for scanned code "${code}"`);
     }
   };
+
+  // The scanner modal restarts the camera whenever its onScan prop changes,
+  // so give it a stable function that always calls the latest handler.
+  const scanHandlerRef = useRef(null);
+  scanHandlerRef.current = handleCameraScan;
+  const stableOnScan = useCallback((code) => scanHandlerRef.current?.(code), []);
 
   const updateCartLine = (productId, field, value) => {
     setCart((prev) =>
@@ -183,23 +241,48 @@ function Sales() {
   const removeCartLine = (productId) =>
     setCart((prev) => prev.filter((line) => line.product._id !== productId));
 
-  const itemsTotal = cart.reduce(
-    (sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.sellingPrice) || 0),
-    0
+  // Live GST preview. Same maths the server uses (utils/gst.js); the server
+  // recalculates everything when the sale is saved, so the saved invoice is
+  // always the server's figure.
+  const gst = useMemo(
+    () =>
+      calculateGst(
+        cart.map((line) => ({
+          subtotal: (Number(line.quantity) || 0) * (Number(line.sellingPrice) || 0),
+          sgstRate: line.product.sgstRate,
+          cgstRate: line.product.cgstRate,
+          igstRate: line.product.igstRate,
+        })),
+        Number(discount) || 0,
+        supplyType
+      ),
+    [cart, discount, supplyType]
   );
-  const grandTotal = Math.max(itemsTotal - Number(discount || 0) + Number(tax || 0), 0);
+  const itemsTotal = gst.totals.itemsTotal;
+  const grandTotal = gst.totals.grandTotal;
+  const discountTooHigh = (Number(discount) || 0) > itemsTotal;
+  // Lines that would be rejected at checkout: bad quantity, over stock, bad price.
+  const lineProblem = (line) => {
+    const qty = Number(line.quantity);
+    if (!Number.isInteger(qty) || qty < 1) return 'Enter a quantity of 1 or more';
+    if (qty > line.product.quantity) return `Only ${line.product.quantity} in stock`;
+    if (!(Number(line.sellingPrice) >= 0) || line.sellingPrice === '') return 'Enter a valid price';
+    return '';
+  };
+  const hasLineProblems = cart.some((line) => lineProblem(line));
+  const canCheckout = cart.length > 0 && !checkingOut && !discountTooHigh && !hasLineProblems;
 
   const resetCart = () => {
     setCart([]);
     setCustomerId('');
     setDiscount(0);
-    setTax(0);
+    setSupplyType('intra');
     setPaymentMethod('Cash');
     setPaymentStatus('paid');
   };
 
   const handleCheckout = async () => {
-    if (cart.length === 0) return;
+    if (!canCheckout) return;
     setCheckoutError('');
     setCheckingOut(true);
     try {
@@ -211,7 +294,7 @@ function Sales() {
           sellingPrice: Number(line.sellingPrice),
         })),
         discount: Number(discount) || 0,
-        tax: Number(tax) || 0,
+        supplyType,
         paymentMethod,
         paymentStatus,
       });
@@ -280,171 +363,261 @@ function Sales() {
         <>
           {checkoutError && <p className="banner banner-error">{checkoutError}</p>}
 
-          <div className="chart-card">
-            <h3>Add a product</h3>
-            <div className="form-row" style={{ alignItems: 'flex-end' }}>
-              <div>
-                <label>Search by name, SKU, or scan barcode + Enter</label>
-                <input
-                  type="text"
-                  value={productQuery}
-                  onChange={(e) => setProductQuery(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  placeholder="Type or scan..."
-                />
-              </div>
-              <div>
-                <label>Or pick from list</label>
-                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                  <option value="">Select a product</option>
-                  {filteredProducts.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.name} ({p.sku}) - {p.quantity} in stock
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button variant="secondary" type="button" onClick={handleAddSelected} disabled={!selectedProductId}>
-                + Add to Cart
-              </Button>
-              <Button variant="secondary" type="button" onClick={() => setScannerOpen(true)}>
-                <ScanBarcode {...ICON_SM} /> Scan
-              </Button>
-            </div>
-          </div>
+          <div className="pos-layout">
+            <div className="pos-main">
+              <section className="panel" aria-label="Add a product">
+                <div className="panel-header">
+                  <h2 className="panel-title">Add a product</h2>
+                  <span className="panel-note">Scan or type a barcode / SKU and press Enter</span>
+                </div>
+                <div className="panel-body">
+                  <div className="pos-add-row">
+                    <div className="field field-grow">
+                      <label htmlFor="pos-search">Search by name, SKU or barcode</label>
+                      <input
+                        id="pos-search"
+                        type="text"
+                        value={productQuery}
+                        onChange={(e) => setProductQuery(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        placeholder="Type or scan..."
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="field field-grow">
+                      <label htmlFor="pos-pick">Or pick from list</label>
+                      <select id="pos-pick" value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
+                        <option value="">Select a product</option>
+                        {filteredProducts.map((p) => (
+                          <option key={p._id} value={p._id}>
+                            {p.name} ({p.sku}) - {p.quantity} in stock
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="pos-add-actions">
+                      <Button variant="secondary" type="button" onClick={handleAddSelected} disabled={!selectedProductId}>
+                        <Plus {...ICON_SM} /> Add to cart
+                      </Button>
+                      <Button variant="secondary" type="button" onClick={() => setScannerOpen(true)}>
+                        <ScanBarcode {...ICON_SM} /> Scan
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-          <div className="chart-card" style={{ marginTop: '1rem' }}>
-            <h3>
-              Cart {cart.length > 0 && <span className="pos-cart-count">{cart.length}</span>}
-            </h3>
-            {cart.length === 0 ? (
-              <p className="empty-state">Cart is empty. Search, scan or select a product above to start a sale.</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th className="col-numeric">Qty</th>
-                    <th className="col-numeric">Unit Price</th>
-                    <th className="col-numeric">Subtotal</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.map((line) => (
-                    <tr key={line.product._id}>
-                      <td>{line.product.name}</td>
-                      <td className="cell-numeric">
-                        <input
-                          type="number"
-                          min="1"
-                          max={line.product.quantity}
-                          value={line.quantity}
-                          onChange={(e) => updateCartLine(line.product._id, 'quantity', e.target.value)}
-                          style={{ width: '70px' }}
-                        />
-                      </td>
-                      <td className="cell-numeric">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={line.sellingPrice}
-                          onChange={(e) => updateCartLine(line.product._id, 'sellingPrice', e.target.value)}
-                          style={{ width: '90px' }}
-                        />
-                      </td>
-                      <td className="cell-numeric">
-                        {formatCurrency((Number(line.quantity) || 0) * (Number(line.sellingPrice) || 0))}
-                      </td>
-                      <td>
-                        <button className="btn-link btn-link-danger" onClick={() => removeCartLine(line.product._id)}>
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+              <section className="panel" aria-label="Cart">
+                <div className="panel-header">
+                  <h2 className="panel-title">
+                    Cart {cart.length > 0 && <span className="pos-cart-count">{cart.length}</span>}
+                  </h2>
+                  {cart.length > 0 && (
+                    <button type="button" className="btn-link btn-link-danger" onClick={() => setCart([])}>
+                      Clear cart
+                    </button>
+                  )}
+                </div>
 
-          <div className="chart-card" style={{ marginTop: '1rem' }}>
-            <h3>Order details</h3>
-            <div className="form-row" style={{ alignItems: 'flex-end' }}>
-              <div>
-                <label>Customer (optional)</label>
-                <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-                  <option value="">Walk-in Customer</option>
-                  {customers.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button variant="secondary" type="button" onClick={() => setCustomerFormOpen(true)}>
-                + New Customer
-              </Button>
-            </div>
-
-            <div className="form-row" style={{ marginTop: '0.75rem' }}>
-              <div>
-                <label>Discount (₹)</label>
-                <input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
-              </div>
-              <div>
-                <label>Tax (₹)</label>
-                <input type="number" min="0" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
-              </div>
-              <div>
-                <label>Payment Method</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                  <option>Cash</option>
-                  <option>Card</option>
-                  <option>UPI</option>
-                  <option>Bank Transfer</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div>
-                <label>Payment Status</label>
-                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
-                  <option value="paid">Paid</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="pos-summary">
-              <div className="pos-summary-row">
-                <span>Subtotal</span>
-                <span>{formatCurrency(itemsTotal)}</span>
-              </div>
-              <div className="pos-summary-row">
-                <span>Discount</span>
-                <span>- {formatCurrency(discount || 0)}</span>
-              </div>
-              <div className="pos-summary-row">
-                <span>Tax</span>
-                <span>+ {formatCurrency(tax || 0)}</span>
-              </div>
-              <div className="pos-summary-row pos-summary-total">
-                <span>Total</span>
-                <span>{formatCurrency(grandTotal)}</span>
-              </div>
+                {cart.length === 0 ? (
+                  <div className="panel-empty">
+                    <strong>Cart is empty</strong>
+                    Search, scan or select a product above to start a sale.
+                  </div>
+                ) : (
+                  <div className="panel-scroll">
+                    <table className="data-table cart-table">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th className="col-numeric">MRP (incl. GST)</th>
+                          <th>Qty</th>
+                          <th className="col-numeric">GST included</th>
+                          <th className="col-numeric">Total</th>
+                          <th>
+                            <span className="sr-only">Remove</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cart.map((line, i) => {
+                          const g = gst.lines[i];
+                          const problem = lineProblem(line);
+                          return (
+                            <tr key={line.product._id}>
+                              <td>
+                                {line.product.name}
+                                <span className="cell-sub cell-mono">{line.product.sku}</span>
+                                <span className="cell-sub">{appliedLabel(g)}</span>
+                              </td>
+                              <td className="cell-numeric">
+                                <span className="price-input">
+                                  <span aria-hidden="true">₹</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={line.sellingPrice}
+                                    onChange={(e) => updateCartLine(line.product._id, 'sellingPrice', e.target.value)}
+                                    aria-label={`Price of ${line.product.name}`}
+                                  />
+                                </span>
+                              </td>
+                              <td>
+                                <QtyStepper
+                                  value={line.quantity}
+                                  max={line.product.quantity}
+                                  onChange={(v) => updateCartLine(line.product._id, 'quantity', v)}
+                                />
+                                {problem && <span className="field-error">{problem}</span>}
+                              </td>
+                              <td className="cell-numeric">
+                                {formatCurrency(g.gstTotal)}
+                                {g.gstTotal > 0 && (
+                                  <span className="cell-sub">
+                                    {[
+                                      g.sgstAmount > 0 && `SGST ${formatCurrency(g.sgstAmount)}`,
+                                      g.cgstAmount > 0 && `CGST ${formatCurrency(g.cgstAmount)}`,
+                                      g.igstAmount > 0 && `IGST ${formatCurrency(g.igstAmount)}`,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' + ')}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="cell-numeric">{formatCurrency(g.lineTotal)}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  aria-label={`Remove ${line.product.name} from cart`}
+                                  onClick={() => removeCartLine(line.product._id)}
+                                >
+                                  <Trash2 {...ICON_SM} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
             </div>
 
-            <div className="modal-actions" style={{ justifyContent: 'flex-end' }}>
-              <Button
-                variant="primary"
-                type="button"
-                onClick={handleCheckout}
-                disabled={cart.length === 0 || checkingOut}
-              >
-                {checkingOut ? 'Processing...' : 'Complete Sale'}
-              </Button>
-            </div>
+            <aside className="pos-side" aria-label="Order summary">
+              <section className="panel">
+                <div className="panel-header">
+                  <h2 className="panel-title">Order summary</h2>
+                </div>
+                <div className="panel-body pos-form">
+                  <div className="field">
+                    <label htmlFor="pos-customer">Customer</label>
+                    <div className="pos-customer-row">
+                      <select id="pos-customer" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                        <option value="">Walk-in customer</option>
+                        {customers.map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Button variant="secondary" type="button" onClick={() => setCustomerFormOpen(true)}>
+                        <Plus {...ICON_SM} /> New
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="field-row-2">
+                    <div className="field">
+                      <label htmlFor="pos-method">Payment method</label>
+                      <select id="pos-method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                        <option>Cash</option>
+                        <option>Card</option>
+                        <option>UPI</option>
+                        <option>Bank Transfer</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="pos-status">Payment status</label>
+                      <select id="pos-status" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+                        <option value="paid">Paid</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="pos-supply">Place of supply</label>
+                    <select id="pos-supply" value={supplyType} onChange={(e) => setSupplyType(e.target.value)}>
+                      <option value="intra">Within state (SGST + CGST)</option>
+                      <option value="inter">Other state (IGST)</option>
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="pos-discount">Discount (₹)</label>
+                    <input
+                      id="pos-discount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={discount}
+                      onChange={(e) => setDiscount(e.target.value)}
+                    />
+                    {discountTooHigh && (
+                      <span className="field-error">Discount can't be more than the items total ({formatCurrency(itemsTotal)})</span>
+                    )}
+                  </div>
+
+                  <dl className="summary-list">
+                    <div className="summary-row">
+                      <dt>MRP total (GST inclusive)</dt>
+                      <dd>{formatCurrency(gst.totals.itemsTotal)}</dd>
+                    </div>
+                    {gst.totals.discount > 0 && (
+                      <div className="summary-row">
+                        <dt>Discount</dt>
+                        <dd>- {formatCurrency(gst.totals.discount)}</dd>
+                      </div>
+                    )}
+                    <div className="summary-row">
+                      <dt>Taxable value</dt>
+                      <dd>{formatCurrency(gst.totals.taxableTotal)}</dd>
+                    </div>
+                    <div className="summary-row">
+                      <dt>SGST{uniformRateLabel(gst.lines, 'sgstRate')}</dt>
+                      <dd>{formatCurrency(gst.totals.sgstTotal)}</dd>
+                    </div>
+                    <div className="summary-row">
+                      <dt>CGST{uniformRateLabel(gst.lines, 'cgstRate')}</dt>
+                      <dd>{formatCurrency(gst.totals.cgstTotal)}</dd>
+                    </div>
+                    <div className="summary-row">
+                      <dt>IGST{uniformRateLabel(gst.lines, 'igstRate')}</dt>
+                      <dd>{formatCurrency(gst.totals.igstTotal)}</dd>
+                    </div>
+                    <div className="summary-row">
+                      <dt>Total GST included</dt>
+                      <dd>{formatCurrency(gst.totals.gstTotal)}</dd>
+                    </div>
+                    <div className="summary-row summary-row-total">
+                      <dt>Grand total</dt>
+                      <dd>{formatCurrency(grandTotal)}</dd>
+                    </div>
+                  </dl>
+                  <p className="field-hint">
+                    Prices already include GST - the customer pays the MRP. The GST shown above is the part of it that is tax.
+                  </p>
+
+                  <Button variant="primary" type="button" className="btn-block btn-lg" onClick={handleCheckout} disabled={!canCheckout}>
+                    {checkingOut ? 'Processing...' : `Complete sale · ${formatCurrency(grandTotal)}`}
+                  </Button>
+                </div>
+              </section>
+            </aside>
           </div>
         </>
       )}
@@ -495,7 +668,7 @@ function Sales() {
 
       <BarcodeScannerModal
         open={scannerOpen}
-        onScan={handleCameraScan}
+        onScan={stableOnScan}
         onClose={() => setScannerOpen(false)}
       />
 
