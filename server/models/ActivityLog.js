@@ -25,4 +25,10 @@ const activityLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// PERFORMANCE: the activity list is always "newest first", optionally
+// filtered by module or user (Activity Logs page + dashboard feed).
+activityLogSchema.index({ createdAt: -1 });
+activityLogSchema.index({ module: 1, createdAt: -1 });
+activityLogSchema.index({ user: 1, createdAt: -1 });
+
 module.exports = mongoose.model('ActivityLog', activityLogSchema);

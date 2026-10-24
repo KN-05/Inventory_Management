@@ -4,6 +4,8 @@
 // Purchase does.
 
 const asyncHandler = require('../utils/asyncHandler');
+const escapeRegex = require('../utils/escapeRegex');
+const { clampLimit } = require('../utils/pagination');
 const logActivity = require('../utils/logActivity');
 const createNotification = require('../utils/createNotification');
 const { generateUniqueInvoiceNumber } = require('../utils/generateInvoiceNumber');
@@ -13,7 +15,7 @@ const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const StockMovement = require('../models/StockMovement');
-const { applyStockChange, findStockLimitViolation } = require('../utils/stockService');
+const { applyStockChanges, rollbackStockChanges, findStockLimitViolation } = require('../utils/stockService');
 
 // @desc   Get all sales, with optional filters + pagination
 // @route  GET /api/sales?customer=&status=&search=&page=&limit=
@@ -24,10 +26,10 @@ const getSales = asyncHandler(async (req, res) => {
   const filter = {};
   if (customer) filter.customer = customer;
   if (status) filter.status = status;
-  if (search) filter.invoiceNumber = { $regex: search, $options: 'i' };
+  if (search) filter.invoiceNumber = { $regex: escapeRegex(search), $options: 'i' };
 
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-  const limitNum = Math.max(parseInt(limit, 10) || 20, 1);
+  const limitNum = clampLimit(limit, 20);
   const skip = (pageNum - 1) * limitNum;
 
   const [sales, total] = await Promise.all([
@@ -147,42 +149,58 @@ const createSale = asyncHandler(async (req, res) => {
   const totalAmount = gst.totals.grandTotal;
   const invoiceNumber = await generateUniqueInvoiceNumber();
 
-  const sale = await Sale.create({
-    invoiceNumber,
-    customer: customer || null,
-    items: computedItems.map(({ _productDoc, ...rest }, index) => ({ ...rest, ...gst.lines[index] })),
-    discount: gst.totals.discount,
-    tax: gst.totals.gstTotal,
-    gstApplied: true,
-    gstMode: 'inclusive',
-    supplyType: supplyType === 'inter' ? 'inter' : 'intra',
-    taxableTotal: gst.totals.taxableTotal,
-    totalSgst: gst.totals.sgstTotal,
-    totalCgst: gst.totals.cgstTotal,
-    totalIgst: gst.totals.igstTotal,
-    totalAmount,
-    paymentMethod,
-    paymentStatus,
-    soldBy: req.user._id,
-  });
+  // STEP 1 - reserve the stock. Each product is decreased with an ATOMIC
+  // "take N only if at least N are there" update, so two cashiers selling the
+  // last unit at the same moment can never both succeed (the check above is
+  // only for a friendly early message; this is the real guard). If any line
+  // fails, the lines already taken are put back and nothing is sold.
+  const reservation = await applyStockChanges(
+    computedItems.map((item) => ({ productId: item.product, delta: -item.quantity }))
+  );
+  if (reservation.error) {
+    res.status(400);
+    throw new Error(
+      reservation.error.status === 404
+        ? 'One or more selected products could not be found'
+        : 'Not enough stock - another sale just used it. Please refresh and try again.'
+    );
+  }
 
-  // Now actually decrease stock + write StockMovement records. Sequential
-  // on purpose - see the identical reasoning in purchaseController.js's
-  // receivePurchase (predictable ordering, easy-to-reason-about partial
-  // failure, and each product.save() triggers the stock-alert hook).
-  for (const item of computedItems) {
-    const product = item._productDoc;
-    const previousStock = product.quantity;
-    product.quantity -= item.quantity;
-    await product.save(); // eslint-disable-line no-await-in-loop -- status/alerts recalculated automatically
+  // STEP 2 - write the sale. If this fails, give the stock back.
+  let sale;
+  try {
+    sale = await Sale.create({
+      invoiceNumber,
+      customer: customer || null,
+      items: computedItems.map(({ _productDoc, ...rest }, index) => ({ ...rest, ...gst.lines[index] })),
+      discount: gst.totals.discount,
+      tax: gst.totals.gstTotal,
+      gstApplied: true,
+      gstMode: 'inclusive',
+      supplyType: supplyType === 'inter' ? 'inter' : 'intra',
+      taxableTotal: gst.totals.taxableTotal,
+      totalSgst: gst.totals.sgstTotal,
+      totalCgst: gst.totals.cgstTotal,
+      totalIgst: gst.totals.igstTotal,
+      totalAmount,
+      paymentMethod,
+      paymentStatus,
+      soldBy: req.user._id,
+    });
+  } catch (err) {
+    await rollbackStockChanges(reservation.applied);
+    throw err;
+  }
 
+  // STEP 3 - stock history, one StockMovement per line.
+  for (const change of reservation.applied) {
     await StockMovement.create({
       // eslint-disable-line no-await-in-loop
-      product: product._id,
+      product: change.product._id,
       type: 'SALE',
-      quantity: -item.quantity, // negative: stock going OUT
-      previousStock,
-      newStock: product.quantity,
+      quantity: change.delta, // negative: stock going OUT
+      previousStock: change.previousStock,
+      newStock: change.product.quantity,
       reason: 'Sold to customer',
       reference: sale.invoiceNumber,
       performedBy: req.user._id,
@@ -190,9 +208,11 @@ const createSale = asyncHandler(async (req, res) => {
   }
 
   if (customerDoc) {
-    customerDoc.totalPurchases += totalAmount;
-    customerDoc.lastPurchase = new Date();
-    await customerDoc.save();
+    // atomic increment - two simultaneous sales to one customer both count
+    await Customer.updateOne(
+      { _id: customerDoc._id },
+      { $inc: { totalPurchases: totalAmount }, $set: { lastPurchase: new Date() } }
+    );
   }
 
   await logActivity(
@@ -219,15 +239,20 @@ const createSale = asyncHandler(async (req, res) => {
 // @route  POST /api/sales/:id/cancel
 // @access Private (Admin only)
 const cancelSale = asyncHandler(async (req, res) => {
-  const sale = await Sale.findById(req.params.id);
+  // Claim the cancellation atomically: only ONE request can flip
+  // completed -> cancelled, so pressing "Cancel" twice (or two people at
+  // once) can never restore the stock twice.
+  const sale = await Sale.findOneAndUpdate(
+    { _id: req.params.id, status: 'completed' },
+    { status: 'cancelled' },
+    { new: true }
+  );
   if (!sale) {
-    res.status(404);
-    throw new Error('Sale not found');
+    const exists = await Sale.exists({ _id: req.params.id });
+    res.status(exists ? 400 : 404);
+    throw new Error(exists ? 'This sale has already been cancelled' : 'Sale not found');
   }
-  if (sale.status === 'cancelled') {
-    res.status(400);
-    throw new Error('This sale has already been cancelled');
-  }
+  const reopen = () => Sale.updateOne({ _id: sale._id }, { status: 'completed' });
 
   // LIMITS: restoring stock is also a stock increase - it may not push any
   // product above 1000 units. Checked for every line before anything changes.
@@ -235,26 +260,30 @@ const cancelSale = asyncHandler(async (req, res) => {
     sale.items.map((item) => ({ product: item.product, quantity: item.quantity }))
   );
   if (limitViolation) {
+    await reopen();
     res.status(400);
     throw new Error(`Cannot cancel this sale: ${limitViolation}`);
   }
 
-  for (const item of sale.items) {
-    const result = await applyStockChange(item.product, Number(item.quantity)); // eslint-disable-line no-await-in-loop
-    if (result.error && result.error.status === 404) continue; // product may have been deleted since the sale was made
-    if (result.error) {
-      res.status(result.error.status);
-      throw new Error(`Cannot cancel this sale: ${result.error.message}`);
-    }
-    const { product, previousStock } = result;
+  // all-or-nothing: if one product refuses, the others are rolled back too
+  const restoration = await applyStockChanges(
+    sale.items.map((item) => ({ productId: item.product, delta: Number(item.quantity) })),
+    { skipMissing: true } // a product may have been deleted since the sale was made
+  );
+  if (restoration.error) {
+    await reopen();
+    res.status(restoration.error.status);
+    throw new Error(`Cannot cancel this sale: ${restoration.error.message}`);
+  }
 
+  for (const change of restoration.applied) {
     await StockMovement.create({
       // eslint-disable-line no-await-in-loop
-      product: product._id,
+      product: change.product._id,
       type: 'RETURN',
-      quantity: item.quantity, // positive: stock coming back IN
-      previousStock,
-      newStock: product.quantity,
+      quantity: change.delta, // positive: stock coming back IN
+      previousStock: change.previousStock,
+      newStock: change.product.quantity,
       reason: 'Sale cancelled',
       reference: sale.invoiceNumber,
       performedBy: req.user._id,
@@ -262,15 +291,11 @@ const cancelSale = asyncHandler(async (req, res) => {
   }
 
   if (sale.customer) {
-    const customerDoc = await Customer.findById(sale.customer);
-    if (customerDoc) {
-      customerDoc.totalPurchases = Math.max(customerDoc.totalPurchases - sale.totalAmount, 0);
-      await customerDoc.save();
-    }
+    // never below zero, and atomic
+    await Customer.updateOne({ _id: sale.customer }, [
+      { $set: { totalPurchases: { $max: [{ $subtract: ['$totalPurchases', sale.totalAmount] }, 0] } } },
+    ]);
   }
-
-  sale.status = 'cancelled';
-  await sale.save();
 
   await logActivity(
     req.user._id,

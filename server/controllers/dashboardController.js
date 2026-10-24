@@ -21,57 +21,66 @@ const StockAlert = require('../models/StockAlert');
 // controller - not just hidden in the UI - so a Staff user calling this
 // API directly (e.g. via devtools/curl) still cannot read it out.
 const getDashboardSummary = asyncHandler(async (req, res) => {
+  // PERFORMANCE: the product numbers (total, per-status counts, stock value,
+  // per-category counts) used to be SEVEN separate queries, each scanning the
+  // whole Products collection. One $facet aggregation computes all of them in
+  // a single pass; the response sent to the client is exactly the same.
   const [
-    totalProducts,
+    [productFacets = {}],
     totalSuppliers,
     totalCategories,
-    inStockCount,
-    lowStockCount,
-    outOfStockCount,
-    stockValueResult,
-    categoryBreakdown,
     recentActivities,
     activeAlertsCount,
   ] = await Promise.all([
-    Product.countDocuments(),
+    Product.aggregate([
+      {
+        $facet: {
+          // product count per status (also gives the grand total)
+          byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+
+          // Total stock value = sum(quantity * price) across all products.
+          stockValue: [
+            { $group: { _id: null, totalValue: { $sum: { $multiply: ['$quantity', '$price'] } } } },
+          ],
+
+          // Product count grouped by category, for the bar chart.
+          byCategory: [
+            { $group: { _id: '$category', count: { $sum: 1 } } },
+            {
+              $lookup: {
+                from: 'categories',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'categoryInfo',
+              },
+            },
+            { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                category: { $ifNull: ['$categoryInfo.name', 'Uncategorized'] },
+                count: 1,
+              },
+            },
+            { $sort: { count: -1 } },
+          ],
+        },
+      },
+    ]),
     Supplier.countDocuments(),
     Category.countDocuments(),
-    Product.countDocuments({ status: 'In Stock' }),
-    Product.countDocuments({ status: 'Low Stock' }),
-    Product.countDocuments({ status: 'Out of Stock' }),
-
-    // Total stock value = sum(quantity * price) across all products.
-    // $multiply happens per-document inside the aggregation pipeline,
-    // then $sum adds all of those up into a single number.
-    Product.aggregate([
-      { $group: { _id: null, totalValue: { $sum: { $multiply: ['$quantity', '$price'] } } } },
-    ]),
-
-    // Product count grouped by category, for a simple bar chart.
-    Product.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      {
-        $lookup: {
-          from: 'categories',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'categoryInfo',
-        },
-      },
-      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          _id: 0,
-          category: { $ifNull: ['$categoryInfo.name', 'Uncategorized'] },
-          count: 1,
-        },
-      },
-      { $sort: { count: -1 } },
-    ]),
-
     ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name'),
     StockAlert.countDocuments({ status: 'active' }),
   ]);
+
+  const byStatus = productFacets.byStatus || [];
+  const countForStatus = (status) => byStatus.find((row) => row._id === status)?.count || 0;
+  const totalProducts = byStatus.reduce((sum, row) => sum + row.count, 0);
+  const inStockCount = countForStatus('In Stock');
+  const lowStockCount = countForStatus('Low Stock');
+  const outOfStockCount = countForStatus('Out of Stock');
+  const stockValueResult = productFacets.stockValue || [];
+  const categoryBreakdown = productFacets.byCategory || [];
 
   const totalStockValue = stockValueResult[0]?.totalValue || 0;
   const isStaff = req.user.role === 'staff';

@@ -118,4 +118,8 @@ purchaseSchema.statics.buildPurchaseNumberCandidate = function (sequence) {
   return `PO-${year}-${paddedSequence}`;
 };
 
+// PERFORMANCE: the Purchases list can be filtered by status / payment status.
+purchaseSchema.index({ status: 1, createdAt: -1 });
+purchaseSchema.index({ paymentStatus: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Purchase', purchaseSchema);

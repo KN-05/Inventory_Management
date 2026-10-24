@@ -52,4 +52,8 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// PERFORMANCE: the bell asks "latest notifications for my role" and
+// "how many unread for my role" on every page.
+notificationSchema.index({ recipientRole: 1, isRead: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Notification', notificationSchema);

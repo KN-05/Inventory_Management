@@ -5,6 +5,7 @@
 // action across the app.
 
 const asyncHandler = require('../utils/asyncHandler');
+const { clampLimit } = require('../utils/pagination');
 const ActivityLog = require('../models/ActivityLog');
 
 // @desc   Get activity logs, paginated and optionally filtered
@@ -18,7 +19,7 @@ const getActivityLogs = asyncHandler(async (req, res) => {
   if (user) filter.user = user;
 
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-  const limitNum = Math.max(parseInt(limit, 10) || 20, 1);
+  const limitNum = clampLimit(limit, 20);
   const skip = (pageNum - 1) * limitNum;
 
   const [logs, total] = await Promise.all([

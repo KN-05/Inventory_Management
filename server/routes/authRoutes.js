@@ -14,6 +14,7 @@ const {
 } = require('../controllers/authController');
 const { runValidation } = require('../middleware/validateMiddleware');
 const { protect } = require('../middleware/authMiddleware');
+const { loginLimiter, passwordResetLimiter } = require('../middleware/rateLimiters');
 
 // POST /api/auth/register
 // PHASE 2: no `role` validator here anymore, and this route now only
@@ -39,6 +40,7 @@ router.post(
 // POST /api/auth/login
 router.post(
   '/login',
+  loginLimiter, // 10 failed attempts / 15 min / IP
   runValidation([
     body('email').isEmail().withMessage('A valid email is required'),
     body('password').notEmpty().withMessage('Password is required'),
@@ -55,6 +57,7 @@ router.get('/me', protect, getMe);
 // POST /api/auth/forgot-password - PHASE 2
 router.post(
   '/forgot-password',
+  passwordResetLimiter,
   runValidation([body('email').isEmail().withMessage('A valid email is required')]),
   forgotPassword
 );
@@ -62,6 +65,7 @@ router.post(
 // POST /api/auth/reset-password/:token - PHASE 2
 router.post(
   '/reset-password/:token',
+  passwordResetLimiter,
   runValidation([
     body('newPassword')
       .isLength({ min: 6 })

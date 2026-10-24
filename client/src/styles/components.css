@@ -1,0 +1,260 @@
+/* styles/components.css - Buttons, banners, toasts and the filters bar.
+   Part of the split of the old AppStyles.jsx; import ORDER matters (see index.css). */
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn-primary {
+  background: var(--color-primary-gradient);
+  color: #fff;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--neu-shadow);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.83rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  margin-right: 0.15rem;
+}
+
+.btn-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-link-danger {
+  color: var(--color-danger);
+}
+
+/* ==========================================================================
+   Banners - persistent, page-level messages (e.g. "failed to load")
+   Transient success/error feedback uses the Toast system instead (below).
+   ========================================================================== */
+.banner {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+  border-left: 3px solid transparent;
+}
+
+.banner-success {
+  color: var(--color-success);
+  border-left-color: var(--color-success);
+}
+
+.banner-error {
+  color: var(--color-danger);
+  border-left-color: var(--color-danger);
+}
+
+/* PHASE 10: used for non-blocking caveats, e.g. the profit-analytics
+   cost-data-limitation note - not an error, just something worth flagging. */
+.banner-warning {
+  color: var(--color-warning);
+  border-left-color: var(--color-warning);
+}
+
+/* ==========================================================================
+   Toast notifications (Phase 10)
+   ========================================================================== */
+.toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 340px;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.87rem;
+  font-weight: 500;
+  background: var(--color-surface);
+  box-shadow: var(--neu-shadow-lg);
+  border-left: 3px solid transparent;
+}
+
+.toast-success {
+  color: var(--color-success);
+  border-left-color: var(--color-success);
+}
+
+.toast-error {
+  color: var(--color-danger);
+  border-left-color: var(--color-danger);
+}
+
+.toast-info {
+  color: var(--color-primary-hover);
+  border-left-color: var(--color-primary);
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Filters bar
+   ========================================================================== */
+.filters-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filters-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+  transition: box-shadow var(--dur-fast) ease;
+}
+
+.filters-search:focus-visible {
+  box-shadow: var(--neu-shadow-inset), 0 0 0 2px var(--color-primary);
+}
+
+/* PHASE 19: optional icon wrapper around .filters-search (currently used
+   by Products) - .filters-search itself is unchanged so every other page
+   using it bare (Sales, Categories, Customers, Suppliers, Purchases,
+   Analytics, Activity Logs, Stock Alerts) looks exactly as before. */
+.filters-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+}
+
+.filters-search-wrap .filters-search {
+  width: 100%;
+  padding-left: 2.1rem;
+}
+
+.filters-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  display: inline-flex;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+/* Friendly fallback shown by ErrorBoundary instead of a blank screen */
+.error-fallback {
+  max-width: 520px;
+  margin: 3rem auto;
+  padding: 1.75rem;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.error-fallback h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.error-fallback p {
+  margin: 0 0 1.25rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.error-fallback-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}

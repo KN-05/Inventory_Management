@@ -73,4 +73,55 @@ async function findStockLimitViolation(increases) {
   return null;
 }
 
-module.exports = { applyStockChange, findStockLimitViolation };
+// Undo stock changes that were already applied (newest first). Used when a
+// LATER step of the same operation fails, so a sale/purchase never leaves
+// stock half-changed. It adds/removes the exact amounts directly (no 0..1000
+// check - we are putting back what we took).
+async function rollbackStockChanges(applied) {
+  for (const change of [...applied].reverse()) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await Product.updateOne({ _id: change.productId }, { $inc: { quantity: -change.delta } });
+      // eslint-disable-next-line no-await-in-loop
+      const product = await Product.findById(change.productId);
+      if (product) {
+        product.status = product.calculateStatus();
+        // eslint-disable-next-line no-await-in-loop
+        await product.save();
+      }
+    } catch (err) {
+      // Nothing more we can do here - make the problem visible to the operator.
+      console.error(`[stock] FAILED to roll back ${change.delta} units on product ${change.productId}: ${err.message}`);
+    }
+  }
+}
+
+// Apply several stock changes as ONE all-or-nothing operation:
+//   changes = [{ productId, delta }]   (delta > 0 adds, delta < 0 removes)
+// Every change is atomic on its own (see applyStockChange). If any change is
+// refused, the ones already applied are rolled back and { error } is
+// returned. A product that no longer exists is skipped when skipMissing is
+// true, and counts as a failure otherwise.
+// On success: { applied: [{ productId, delta, product, previousStock }] }.
+async function applyStockChanges(changes, { skipMissing = false } = {}) {
+  const applied = [];
+  for (const change of changes) {
+    // eslint-disable-next-line no-await-in-loop
+    const result = await applyStockChange(change.productId, change.delta);
+    if (result.error) {
+      if (result.error.status === 404 && skipMissing) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await rollbackStockChanges(applied);
+      return { error: result.error };
+    }
+    applied.push({
+      productId: change.productId,
+      delta: change.delta,
+      product: result.product,
+      previousStock: result.previousStock,
+    });
+  }
+  return { applied };
+}
+
+module.exports = { applyStockChange, applyStockChanges, rollbackStockChanges, findStockLimitViolation };

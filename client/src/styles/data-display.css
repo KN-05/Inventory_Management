@@ -1,0 +1,297 @@
+/* styles/data-display.css - Data table, badges, inline stock adjust and modal.
+   Part of the split of the old AppStyles.jsx; import ORDER matters (see index.css). */
+
+/* ==========================================================================
+   Data table
+   ========================================================================== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow);
+  overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--color-bg);
+  font-size: 0.88rem;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+}
+
+.data-table th {
+  background: transparent;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+/* SKUs get the monospace "ledger" treatment - applied explicitly via
+   .cell-mono rather than by column position, since column order differs
+   across tables (Products, Categories, Suppliers, Users). */
+.cell-mono {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+/* Numbers (quantity, price) read better right-aligned than left-aligned
+   text codes like SKU - same monospace treatment, different alignment. */
+.cell-numeric {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--color-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th.col-numeric {
+  text-align: right;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: 2.5rem 1rem;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+.loader {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.loader::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reusable shimmer skeleton, e.g. for a placeholder while data loads */
+.skeleton {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    #f4f6f9 37%,
+    var(--color-border) 63%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* ==========================================================================
+   Badges
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+/* PHASE 19: small colored status dot in front of the badge text (In
+   Stock / Low Stock / Out of Stock, etc.) for quicker visual scanning -
+   uses currentColor so it automatically matches whichever badge-* color
+   modifier is applied, no per-badge color duplication needed. */
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.badge-green {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-yellow {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badge-red {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* PHASE 11: used for "informational/structural" activity-log modules
+   (product, category, supplier) that aren't a warning/success/danger -
+   just a fourth neutral-ish colored option so a long, mixed-module list
+   scans easily without every row looking identical. */
+.badge-blue {
+  background: var(--color-bg);
+  color: var(--color-primary);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+/* ==========================================================================
+   Stock adjust inline control
+   ========================================================================== */
+.stock-adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stock-adjust input {
+  width: 64px;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+.stock-adjust button {
+  border: none;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  transition: box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.stock-adjust button:active {
+  box-shadow: var(--neu-shadow-inset);
+  transform: scale(0.95);
+}
+
+/* ==========================================================================
+   Modal
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 17, 21, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.modal-box {
+  background: var(--color-surface);
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--neu-shadow-lg);
+}
+
+.modal-box h2 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-form label {
+  font-size: 0.83rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.modal-form input,
+.modal-form select {
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  font-family: inherit;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-row > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* PHASE 7: purchase line-item row - product select, qty, price, remove
+   button side by side. Direct children (not wrapped in divs like normal
+   .form-row usage) so sized explicitly here instead of via the
+   ".form-row > div { flex: 1 }" rule above. */
+.purchase-item-row {
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.purchase-item-row select {
+  flex: 3;
+}
+
+.purchase-item-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.purchase-item-row button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}

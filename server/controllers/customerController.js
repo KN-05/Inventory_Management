@@ -3,6 +3,8 @@
 // are read-only here - they're maintained by saleController.js.
 
 const asyncHandler = require('../utils/asyncHandler');
+const escapeRegex = require('../utils/escapeRegex');
+const { clampLimit } = require('../utils/pagination');
 const logActivity = require('../utils/logActivity');
 const toCsv = require('../utils/toCsv');
 const Customer = require('../models/Customer');
@@ -16,14 +18,14 @@ const getCustomers = asyncHandler(async (req, res) => {
   const filter = {};
   if (search) {
     filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { phone: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+      { name: { $regex: escapeRegex(search), $options: 'i' } },
+      { phone: { $regex: escapeRegex(search), $options: 'i' } },
+      { email: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-  const limitNum = Math.max(parseInt(limit, 10) || 20, 1);
+  const limitNum = clampLimit(limit, 20);
   const skip = (pageNum - 1) * limitNum;
 
   const [customers, total] = await Promise.all([

@@ -4,6 +4,8 @@ const { parse } = require('csv-parse/sync');
 const fs = require('fs');
 const path = require('path');
 const asyncHandler = require('../utils/asyncHandler');
+const escapeRegex = require('../utils/escapeRegex');
+const { clampLimit } = require('../utils/pagination');
 const logActivity = require('../utils/logActivity');
 const { generateUniqueSku, generateUniqueBarcode } = require('../utils/generateProductCodes');
 const toCsv = require('../utils/toCsv');
@@ -61,9 +63,9 @@ const getProducts = asyncHandler(async (req, res) => {
     // PHASE 6: also match barcode, so the same search box used on the
     // Products page doubles as a quick "scan/type a barcode" lookup.
     filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { sku: { $regex: search, $options: 'i' } },
-      { barcode: { $regex: search, $options: 'i' } },
+      { name: { $regex: escapeRegex(search), $options: 'i' } },
+      { sku: { $regex: escapeRegex(search), $options: 'i' } },
+      { barcode: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
@@ -72,7 +74,7 @@ const getProducts = asyncHandler(async (req, res) => {
   if (status) filter.status = status;
 
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-  const limitNum = Math.max(parseInt(limit, 10) || 20, 1);
+  const limitNum = clampLimit(limit, 20);
   const skip = (pageNum - 1) * limitNum;
 
   const [products, total] = await Promise.all([
@@ -183,7 +185,14 @@ const updateProduct = asyncHandler(async (req, res) => {
   // PHASE 30: barcode is editable, but only for Admin/Manager, and only
   // if it actually changed (avoids an unnecessary uniqueness query on
   // every save when the field is just being re-sent unchanged).
-  if (barcode !== undefined && barcode !== product.barcode) {
+  //
+  // Old products (created before barcodes existed) have NO barcode, and the
+  // Edit form sends a blank one for them. A blank barcode on a product that
+  // has none is "no change", not an error - otherwise no other field (GST,
+  // price, name...) of such a product could ever be saved. Clearing an
+  // EXISTING barcode is still refused below.
+  const barcodeIsUnchangedBlank = !product.barcode && String(barcode ?? '').trim() === '';
+  if (barcode !== undefined && barcode !== product.barcode && !barcodeIsUnchangedBlank) {
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
       res.status(403);
       throw new Error('Only Admin or Manager can edit the barcode');

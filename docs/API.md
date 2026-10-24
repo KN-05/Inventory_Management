@@ -168,3 +168,19 @@ All image uploads (product/category/profile photos) accept `.jpg`, `.jpeg`, `.pn
 | 403 | Valid token, but the role/permission doesn't allow this action; also a deactivated account |
 | 404 | Resource not found, or no route matched at all |
 | 500 | Unexpected server error (stack trace included only outside production) |
+| 429 | Rate limit hit (too many failed logins, password-reset or OTP attempts, or too many requests overall) |
+
+## Validation limits
+
+Enforced by the server on every route that can change them (create/update product, stock increase/decrease, CSV import, purchase receive, sale cancel). A request that breaks a limit gets **400** with a message and nothing is changed — values are never rounded or clamped.
+
+| Field | Rule |
+|---|---|
+| Product `price` (MRP incl. GST) | 0.01 to 10000000 (₹1,00,00,000), at most 2 decimals. Message: `Maximum product price allowed is ₹1,00,00,000.` |
+| Product `quantity` | whole number 0 to 1000. Message: `Quantity must be an integer between 0 and 1000.` |
+| Stock `amount` (increase/decrease) | whole number 1 to 1000; the **resulting** stock must stay within 0 to 1000 |
+| Sale line `sellingPrice`, purchase line `purchasePrice` | 0 to 10000000 |
+| Purchase line `quantity` | whole number 1 to 1000 |
+| `?limit=` on list endpoints | capped at 1000 (default 20) |
+
+CSV import rows that break a limit are reported in `errors[]` with the product name, the field (`quantity` or `price`) and the reason; the other rows still import.

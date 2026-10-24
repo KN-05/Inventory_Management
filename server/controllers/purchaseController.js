@@ -4,6 +4,8 @@
 // status separately. See models/Purchase.js for the workflow rationale.
 
 const asyncHandler = require('../utils/asyncHandler');
+const escapeRegex = require('../utils/escapeRegex');
+const { clampLimit } = require('../utils/pagination');
 const logActivity = require('../utils/logActivity');
 const createNotification = require('../utils/createNotification');
 const { generateUniquePurchaseNumber } = require('../utils/generatePurchaseNumber');
@@ -12,7 +14,7 @@ const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const StockMovement = require('../models/StockMovement');
-const { applyStockChange, findStockLimitViolation } = require('../utils/stockService');
+const { applyStockChanges, findStockLimitViolation } = require('../utils/stockService');
 
 // Recomputes each line item's subtotal + the purchase's totalAmount from
 // scratch, server-side - never trusts totals sent by the client.
@@ -38,10 +40,10 @@ const getPurchases = asyncHandler(async (req, res) => {
   if (supplier) filter.supplier = supplier;
   if (status) filter.status = status;
   if (paymentStatus) filter.paymentStatus = paymentStatus;
-  if (search) filter.purchaseNumber = { $regex: search, $options: 'i' };
+  if (search) filter.purchaseNumber = { $regex: escapeRegex(search), $options: 'i' };
 
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-  const limitNum = Math.max(parseInt(limit, 10) || 20, 1);
+  const limitNum = clampLimit(limit, 20);
   const skip = (pageNum - 1) * limitNum;
 
   const [purchases, total] = await Promise.all([
@@ -267,6 +269,20 @@ const receivePurchase = asyncHandler(async (req, res) => {
     throw new Error('Cannot receive a cancelled purchase');
   }
 
+  // Claim the receive atomically: only ONE request can flip pending ->
+  // received, so a double-click or two people receiving at once can never add
+  // the stock twice.
+  const claimed = await Purchase.findOneAndUpdate(
+    { _id: purchase._id, status: 'pending' },
+    { status: 'received', receivedDate: new Date() },
+    { new: true }
+  );
+  if (!claimed) {
+    res.status(400);
+    throw new Error('This purchase has already been received or is no longer pending');
+  }
+  const unclaim = () => Purchase.updateOne({ _id: purchase._id }, { status: 'pending', receivedDate: null });
+
   // LIMITS: no product may end above 1000 units. Check EVERY line first (a
   // product that appears on several lines is added together) so the purchase
   // is rejected as a whole, before any stock has been touched.
@@ -274,41 +290,41 @@ const receivePurchase = asyncHandler(async (req, res) => {
     purchase.items.map((item) => ({ product: item.product._id || item.product, quantity: item.quantity }))
   );
   if (limitViolation) {
+    await unclaim();
     res.status(400);
     throw new Error(limitViolation);
   }
 
-  // Sequential on purpose (not Promise.all) - each product save can
-  // trigger the stock-alert/notification hook, and going one at a time
-  // keeps the resulting activity/notification order predictable and
-  // makes a partial failure easy to reason about.
-  for (const item of purchase.items) {
-    // applyStockChange is an atomic "add if the result stays <= 1000" update,
-    // so a concurrent stock change cannot push the product over the limit
-    // between the check above and this write.
-    const result = await applyStockChange(item.product._id || item.product, Number(item.quantity)); // eslint-disable-line no-await-in-loop
-    if (result.error && result.error.status === 404) continue; // product may have been deleted since the purchase was created
-    if (result.error) {
-      res.status(result.error.status);
-      throw new Error(result.error.message);
-    }
-    const { product, previousStock } = result;
+  // All-or-nothing: every line is an atomic "add if the result stays <= 1000"
+  // update; if one is refused (e.g. someone else just added stock), the lines
+  // already added are rolled back and the purchase goes back to pending.
+  const receipt = await applyStockChanges(
+    purchase.items.map((item) => ({ productId: item.product._id || item.product, delta: Number(item.quantity) })),
+    { skipMissing: true } // product may have been deleted since the purchase was created
+  );
+  if (receipt.error) {
+    await unclaim();
+    res.status(receipt.error.status);
+    throw new Error(receipt.error.message);
+  }
 
+  for (const change of receipt.applied) {
     await StockMovement.create({
-      product: product._id,
+      // eslint-disable-line no-await-in-loop
+      product: change.product._id,
       type: 'PURCHASE',
-      quantity: item.quantity, // positive: stock coming IN
-      previousStock,
-      newStock: product.quantity,
+      quantity: change.delta, // positive: stock coming IN
+      previousStock: change.previousStock,
+      newStock: change.product.quantity,
       reason: 'Received purchase order',
       reference: purchase.purchaseNumber,
       performedBy: req.user._id,
-    }); // eslint-disable-line no-await-in-loop
+    });
   }
 
+  // status/receivedDate were already saved by the atomic claim above
   purchase.status = 'received';
-  purchase.receivedDate = new Date();
-  await purchase.save();
+  purchase.receivedDate = claimed.receivedDate;
 
   await logActivity(
     req.user._id,

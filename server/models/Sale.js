@@ -154,4 +154,7 @@ saleSchema.statics.buildInvoiceNumberCandidate = function (sequence) {
   return `INV-${year}-${paddedSequence}`;
 };
 
+// PERFORMANCE: the Sales list can be filtered by status.
+saleSchema.index({ status: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Sale', saleSchema);

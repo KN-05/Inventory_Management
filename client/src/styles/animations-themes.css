@@ -1,0 +1,115 @@
+/* styles/animations-themes.css - Shared keyframes + per-role themes (admin / manager / staff).
+   Part of the split of the old AppStyles.jsx; import ORDER matters (see index.css). */
+
+/* ==========================================================================
+   Shared animation keyframes
+   ========================================================================== */
+/* NOTE: entrance/hover/press animations (cards, rows, modals, toasts,
+   buttons) now live in React via Framer Motion - see StatCard.jsx,
+   ProductTable.jsx, AnimatedModal.jsx, Button.jsx, ToastContext.jsx, etc.
+   Only continuous/decorative CSS animations remain here (spinner, shimmer
+   skeleton) since those aren't tied to a mount/interaction event. */
+@keyframes shimmer {
+  0% {
+    background-position: -300px 0;
+  }
+  100% {
+    background-position: 300px 0;
+  }
+}
+
+/* ==========================================================================
+   Per-role visual themes
+   ==========================================================================
+   Only the colour/gradient tokens change between roles - the neumorphic
+   surface treatment, spacing, typography, and radii stay identical. This
+   keeps the app feeling like ONE consistent product with three colour
+   identities, not three different apps.
+
+   Scoped to [data-theme="..."] on .app-shell (set in DashboardLayout.jsx
+   from the logged-in user's role), so these never apply to the public
+   Login/Register pages, which use the default (:root / admin) purple as a
+   neutral pre-login brand colour.
+
+   'manager' has no corresponding role in the database yet - that's
+   introduced in Phase 2 (Authentication + Role System) - but the theme is
+   defined now and will apply automatically the moment that role exists,
+   with zero extra frontend work needed. */
+
+/* Each role keeps its own colour identity (set via data-theme on
+   .app-shell in DashboardLayout.jsx) so it's clear which panel you're in,
+   but kept restrained: solid sidebar colours, no gradients, and primary
+   colours dark enough for white button text to stay readable (WCAG AA).
+     Admin   - indigo   on deep navy
+     Manager - teal     on deep green-grey
+     Staff   - amber    on warm charcoal
+   Only brand/sidebar tokens change per role - spacing, typography, cards,
+   tables and the success/warning/danger colours are identical. */
+.app-shell[data-theme='admin'] {
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-bg: #eef2ff;
+  --color-primary-gradient: #4f46e5;
+  --sidebar-gradient: #0f172a;
+  --sidebar-text: #a3b0c4;
+  --sidebar-section-label: #8794a8;
+  --sidebar-accent: #818cf8;
+}
+
+.app-shell[data-theme='manager'] {
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-primary-bg: #f0fdfa;
+  --color-primary-gradient: #0f766e;
+  --sidebar-gradient: #102a2a;
+  --sidebar-text: #9db8b6;
+  --sidebar-section-label: #86a3a1;
+  --sidebar-accent: #2dd4bf;
+}
+
+.app-shell[data-theme='staff'] {
+  --color-primary: #b45309;
+  --color-primary-hover: #92400e;
+  --color-primary-bg: #fffbeb;
+  --color-primary-gradient: #b45309;
+  --sidebar-gradient: #1c1917;
+  --sidebar-text: #b5aca3;
+  --sidebar-section-label: #9a9087;
+  --sidebar-accent: #fbbf24;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

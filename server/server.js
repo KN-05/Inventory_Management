@@ -11,22 +11,42 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const morgan = require('morgan');
 
 const connectDB = require('./config/db');
+const validateEnv = require('./config/validateEnv');
+const { apiLimiter } = require('./middleware/rateLimiters');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
-// Connect to MongoDB before anything else
+// Refuse to start with a missing/weak config, then connect to MongoDB
+validateEnv();
 connectDB();
 
 const app = express();
 
-// --- Core middleware ---
-// Allow the frontend (running on a different port) to call this API
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+// Behind a proxy / load balancer (Render, Nginx...) set TRUST_PROXY=1 so
+// rate limiting sees each visitor's real IP instead of the proxy's.
+if (process.env.TRUST_PROXY) {
+  app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
+}
 
-// Parse incoming JSON request bodies into req.body
-app.use(express.json());
+// --- Core middleware ---
+// Security headers (no clickjacking/MIME sniffing, etc.). "cross-origin" is
+// needed because the frontend lives on another origin and loads the product /
+// profile images this server serves from /uploads.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+// Allow the frontend (running on a different port) to call this API.
+// CLIENT_URL may hold several origins separated by commas.
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+// Parse incoming JSON request bodies into req.body (explicit size cap)
+app.use(express.json({ limit: '100kb' }));
 
 // PHASE 2: serve uploaded profile photos as static files, so the
 // frontend can display them directly via <img src="http://.../uploads/...">
@@ -47,6 +67,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // --- Feature routes ---
+// Generous overall request cap; login / reset / OTP have stricter ones on their routes.
+app.use('/api', apiLimiter);
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));

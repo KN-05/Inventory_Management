@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const asyncHandler = require('../utils/asyncHandler');
+const escapeRegex = require('../utils/escapeRegex');
 const logActivity = require('../utils/logActivity');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
@@ -19,7 +20,7 @@ const getCategories = asyncHandler(async (req, res) => {
   // PHASE 6: search-by-name, matching the pattern already used on
   // Suppliers, so every lookup list in the app behaves consistently.
   if (search) {
-    filter.name = { $regex: search, $options: 'i' };
+    filter.name = { $regex: escapeRegex(search), $options: 'i' };
   }
 
   const categories = await Category.find(filter).sort({ name: 1 });

@@ -208,6 +208,11 @@ function ProductForm({ open, product, categories, suppliers, onSubmit, onCancel,
       if (!canEditBarcode) {
         delete payload.barcode;
       }
+      // An old product without a barcode: don't send an empty one (nothing to
+      // change) - the barcode is only sent when it has a value.
+      if (!String(payload.barcode ?? '').trim() && !product?.barcode) {
+        delete payload.barcode;
+      }
       await onSubmit(payload);
     } finally {
       setSubmitting(false);

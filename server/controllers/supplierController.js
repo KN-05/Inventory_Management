@@ -6,6 +6,7 @@
 // below populates that virtual so the frontend can show linked products.
 
 const asyncHandler = require('../utils/asyncHandler');
+const escapeRegex = require('../utils/escapeRegex');
 const logActivity = require('../utils/logActivity');
 const toCsv = require('../utils/toCsv');
 const Supplier = require('../models/Supplier');
@@ -20,8 +21,8 @@ const getSuppliers = asyncHandler(async (req, res) => {
 
   if (search) {
     filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+      { name: { $regex: escapeRegex(search), $options: 'i' } },
+      { email: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 

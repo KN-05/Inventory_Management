@@ -1,5 +1,6 @@
 // src/App.jsx
 
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
@@ -8,29 +9,36 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import PublicRoute from './components/common/PublicRoute';
 import RoleRoute from './components/common/RoleRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
+import Loader from './components/common/Loader';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
-import LandingPage from './pages/LandingPage';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import Dashboard from './pages/Dashboard';
-import Products from './pages/Products';
-import Categories from './pages/Categories';
-import Suppliers from './pages/Suppliers';
-import Purchases from './pages/Purchases';
-import Customers from './pages/Customers';
-import Sales from './pages/Sales';
-import StockAlerts from './pages/StockAlerts';
-import UserManagement from './pages/admin/UserManagement';
-import StaffPasswords from './pages/admin/StaffPasswords';
-import Reports from './pages/admin/Reports';
-import Analytics from './pages/admin/Analytics';
-import AIInsights from './pages/admin/AIInsights';
-import ActivityLogs from './pages/admin/ActivityLogs';
-import Settings from './pages/admin/Settings';
-import Profile from './pages/Profile';
-import Attendance from './pages/Attendance';
+// PERFORMANCE: every page is loaded on demand (code splitting). Before, the
+// browser had to download the code for ALL pages - charts, admin screens, the
+// landing page - before showing anything. Now it downloads only the page being
+// opened; the rest arrive when the user navigates there.
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Products = lazy(() => import('./pages/Products'));
+const Categories = lazy(() => import('./pages/Categories'));
+const Suppliers = lazy(() => import('./pages/Suppliers'));
+const Purchases = lazy(() => import('./pages/Purchases'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Sales = lazy(() => import('./pages/Sales'));
+const StockAlerts = lazy(() => import('./pages/StockAlerts'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const StaffPasswords = lazy(() => import('./pages/admin/StaffPasswords'));
+const Reports = lazy(() => import('./pages/admin/Reports'));
+const Analytics = lazy(() => import('./pages/admin/Analytics'));
+const AIInsights = lazy(() => import('./pages/admin/AIInsights'));
+const ActivityLogs = lazy(() => import('./pages/admin/ActivityLogs'));
+const Settings = lazy(() => import('./pages/admin/Settings'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Attendance = lazy(() => import('./pages/Attendance'));
+
 
 function App() {
   return (
@@ -38,6 +46,8 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
+          <ErrorBoundary>
+          <Suspense fallback={<Loader label="Loading..." />}>
           <Routes>
             {/* PHASE 16: new landing/starting page - the first thing users
                 see at "/". Purely informational; the existing "Login"
@@ -182,6 +192,8 @@ function App() {
                 exactly as it did before this change. */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </Suspense>
+          </ErrorBoundary>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

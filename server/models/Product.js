@@ -241,4 +241,18 @@ productSchema.post('save', async function (doc) {
   }
 });
 
+// PERFORMANCE: indexes for the queries the app actually runs. Without them
+// MongoDB reads EVERY product for each of these. (sku and barcode are already
+// indexed by `unique: true`.)
+//  - status: dashboard counts + the Status filter + low/out-of-stock lists
+//  - category / supplier: the Category and Supplier filters
+//  - createdAt: the default "newest first" sort of the Products list
+// Note: the search box uses an unanchored, case-insensitive regex, which no
+// index can speed up - that one is fine for thousands of products; for
+// hundreds of thousands, switch to a MongoDB text/Atlas Search index.
+productSchema.index({ status: 1, createdAt: -1 });
+productSchema.index({ category: 1 });
+productSchema.index({ supplier: 1 });
+productSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Product', productSchema);

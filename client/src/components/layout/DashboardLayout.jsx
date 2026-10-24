@@ -17,10 +17,12 @@
 // slide-over drawer behaviour (sidebarOpen) is completely separate and
 // unaffected.
 
-import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Suspense, useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import Loader from '../common/Loader';
+import ErrorBoundary from '../common/ErrorBoundary';
 import { getAlerts } from '../../api/alerts';
 import { useAuth } from '../../context/useAuth';
 
@@ -28,6 +30,7 @@ const COLLAPSE_STORAGE_KEY = 'im_sidebar_collapsed';
 
 function DashboardLayout() {
   const { user } = useAuth();
+  const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeAlertsCount, setActiveAlertsCount] = useState(0);
   const [collapsed, setCollapsed] = useState(() => {
@@ -38,15 +41,16 @@ function DashboardLayout() {
     }
   });
 
-  // Fetched once when the layout mounts (i.e. after login), so the Stock
-  // Alerts badge is visible from any page, not just the Dashboard.
+  // Loaded after login AND again whenever the user moves to another page, so
+  // the Stock Alerts badge stays correct after alerts are resolved or created
+  // by a sale/purchase (one small request per navigation, no polling).
   useEffect(() => {
     getAlerts('active')
       .then((data) => setActiveAlertsCount(data.alerts.length))
       .catch(() => {
         /* silently ignore - badge just won't show a count */
       });
-  }, []);
+  }, [pathname]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -73,7 +77,14 @@ function DashboardLayout() {
       <div className="app-main">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="app-content">
-          <Outlet />
+          {/* Pages load on demand (see App.jsx). This boundary keeps the sidebar
+              and navbar on screen while a page's code is still downloading. */}
+          {/* resetKey: a crashed page recovers as soon as the user opens another one */}
+          <ErrorBoundary resetKey={pathname}>
+            <Suspense fallback={<Loader label="Loading..." />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

@@ -174,6 +174,43 @@ A typical free-tier deployment splits the two apps:
 | CORS error in the browser console | `CLIENT_URL` in `server/.env` doesn't match the URL the frontend is actually running on. |
 | Login fails with correct credentials | Make sure you registered that exact account, and that `JWT_SECRET` hasn't changed since the token was issued (changing it invalidates all existing tokens - just log in again). |
 
+## Business limits (price and stock)
+
+These rules are enforced **on the server** (the browser forms only give instant feedback), so they also apply to direct API calls, CSV import, stock adjustments, purchases and sale cancellations:
+
+| Field | Rule |
+|---|---|
+| Product price (MRP incl. GST) | `0.01` to `₹1,00,00,000`, at most 2 decimals |
+| Product quantity | whole number `0` to `1000` — the limit applies to the **final** stock (900 + 101 is rejected) |
+| Stock adjust amount | whole number `1` to `1000` |
+
+The limits live in `server/utils/productLimits.js` and a matching copy in `client/src/utils/productLimits.js` — change both together. Products that already break the limits are never changed automatically; list them with `node scripts/reportLimitViolations.js` (run from `server/`).
+
+Stock changes go through `server/utils/stockService.js`, which uses atomic database updates (two sales of the last unit cannot both succeed) and rolls back if a later step fails.
+
+## Security notes
+
+- `.env` holds secrets and must never be committed — copy `server/.env.example` to `server/.env` and fill it in. `JWT_SECRET` must be at least 32 random characters (the server warns in development and refuses to start in production otherwise).
+- Rate limits: 10 failed logins / 15 min / IP, 5 password-reset requests / hour, 6 staff-OTP attempts / 10 min. Behind a proxy (Render, Nginx…) set `TRUST_PROXY=1`. Counters are in memory, so they reset on restart and are not shared between several server instances.
+- `helmet` security headers are on; `?limit=` is capped at 1000; search text is regex-escaped.
+
+## Tests and lint
+
+```bash
+cd server
+npm test          # node's built-in test runner, no database needed (models are faked)
+npm run lint      # ESLint
+cd ../client
+npm run lint      # oxlint
+npm run build
+```
+
+The server tests cover price/quantity limits, CSV import, stock adjustment, atomic sale / cancel / receive flows, login, token checks, role permissions, rate limiting and the dashboard summary. They use in-memory fakes, so they prove the logic but not MongoDB itself — also try a few real concurrent sales on a test database.
+
+## Frontend structure
+
+All styling lives in `client/src/styles/` (one file per area, loaded in order by `styles/index.css` — keep that order, later files override earlier ones). Pages are loaded on demand (`React.lazy` in `App.jsx`) and wrapped in an `ErrorBoundary`, so a crash in one page shows a message instead of a blank screen.
+
 ## Development Notes
 
 This project was built incrementally across 12 phases (architecture → setup → models → auth → each feature module → dashboard → alerts → admin → profile → UI polish → testing → this document). If you're learning MERN from this codebase, every non-trivial file has inline comments explaining *why*, not just *what* — start with `server/server.js` and `client/src/App.jsx` to see how everything connects.

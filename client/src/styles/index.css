@@ -1,0 +1,17 @@
+/* styles/index.css - single entry point for ALL app styles.
+   The files are imported in the SAME order the rules used to appear in
+   AppStyles.jsx. Do not reorder them: later files intentionally override
+   earlier ones (e.g. mobile rules come after the base layout). */
+
+@import './tokens-and-base.css';
+@import './animations-themes.css';
+@import './auth.css';
+@import './landing.css';
+@import './layout.css';
+@import './components.css';
+@import './sales-pos.css';
+@import './data-display.css';
+@import './dashboard.css';
+@import './alerts-admin.css';
+@import './responsive-mobile.css';
+@import './products-page.css';

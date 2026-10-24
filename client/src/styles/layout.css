@@ -1,0 +1,914 @@
+/* styles/layout.css - App shell (sidebar, navbar, content area) and general page layout.
+   Part of the split of the old AppStyles.jsx; import ORDER matters (see index.css). */
+
+/* ==========================================================================
+   App shell: Sidebar + Navbar + content (Phase 10)
+   ========================================================================== */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--sidebar-width);
+  transition: margin-left var(--dur-base) var(--ease-out);
+}
+
+.app-content {
+  flex: 1;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--sidebar-gradient);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0.75rem;
+  overflow: hidden; /* header + user card stay pinned; only .sidebar-nav scrolls */
+  z-index: 40;
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem 1.25rem;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.sidebar-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-brand-text {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  transition: max-width var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.sidebar-section-label {
+  margin: 1rem 0.6rem 0.35rem;
+  height: 1rem;
+  line-height: 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sidebar-section-label);
+  transition: height var(--dur-base) var(--ease-out), margin var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) ease;
+}
+
+.sidebar-nav .sidebar-section-label:first-child {
+  margin-top: 0;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: var(--sidebar-bg-active);
+  color: var(--sidebar-text-active);
+}
+
+.sidebar-link-active {
+  background: var(--sidebar-bg-active);
+  color: var(--sidebar-text-active);
+  border-left-color: var(--sidebar-accent, #ffffff);
+}
+
+.sidebar-link-icon {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-link-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sidebar-link-text {
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: max-width var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease;
+}
+
+/* Collapse / expand button. It sits in the sidebar header (fully inside the
+   sidebar, so nothing is clipped or pokes into the page). Hidden on mobile,
+   where the navbar menu button opens the drawer instead. */
+.sidebar-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.sidebar-collapse-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+.sidebar-collapse-toggle:focus-visible {
+  outline: 2px solid var(--sidebar-accent, #fff);
+  outline-offset: 2px;
+}
+
+/* Tooltip for the icon-only sidebar (positioned by Sidebar.jsx) */
+.sidebar-tooltip {
+  position: fixed;
+  transform: translateY(-50%);
+  z-index: 60;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .sidebar-collapse-toggle,
+  .sidebar-tooltip {
+    display: none;
+  }
+}
+
+/* Collapsed rail (desktop only). The width comes from --sidebar-width, which
+   both .sidebar and .app-main already read - so the page content follows the
+   sidebar automatically, with the same transition. */
+@media (min-width: 901px) {
+  .app-shell.sidebar-collapsed {
+    --sidebar-width: 72px;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* logo on top, toggle button underneath, both centered */
+  .app-shell.sidebar-collapsed .sidebar-header {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.6rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-brand-text,
+  .app-shell.sidebar-collapsed .sidebar-link-text,
+  .app-shell.sidebar-collapsed .sidebar-user-info {
+    max-width: 0;
+    flex: 0 0 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  /* headings collapse into a thin divider between groups */
+  .app-shell.sidebar-collapsed .sidebar-section-label {
+    height: 1px;
+    margin: 0.6rem 0.6rem;
+    font-size: 0;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-nav .sidebar-section-label:first-child {
+    height: 0;
+    margin: 0;
+    background: none;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* the alerts count becomes a small dot on the icon's top-right corner */
+  .app-shell.sidebar-collapsed .nav-badge {
+    position: absolute;
+    top: 6px;
+    left: calc(50% + 5px);
+    min-width: 0;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    margin: 0;
+    font-size: 0;
+    box-shadow: 0 0 0 2px var(--sidebar-gradient);
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-user-card {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-logout-btn {
+    width: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+  }
+}
+
+/* PHASE 18: bottom user card - sits at the end of the sidebar (the
+   sidebar is a column flex container with .sidebar-nav set to flex: 1
+   above, so this naturally lands at the bottom). */
+.sidebar-user-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-user-name {
+  color: #fff;
+  font-size: 0.83rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.72rem;
+}
+
+.sidebar-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) ease;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+/* --- Navbar --- */
+.navbar {
+  height: var(--navbar-height);
+  background: var(--color-surface);
+  box-shadow: 0 2px 8px rgba(30, 36, 51, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.navbar-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.navbar-menu-btn span {
+  display: block;
+  height: 2px;
+  background: var(--color-text);
+  border-radius: 1px;
+}
+
+.navbar-spacer {
+  flex: 1;
+}
+
+.navbar-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.7rem;
+  max-width: 320px;
+  width: 100%;
+}
+
+.navbar-search-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.navbar-search input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.85rem;
+  width: 100%;
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.navbar-search input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.navbar-user-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.navbar-user-role {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+/* PHASE: navbar profile dropdown - click the avatar to open name/role +
+   a Profile link + Logout, instead of a bare always-visible Logout
+   button. Reuses the exact same container/positioning pattern as
+   .notif-bell-container/.notif-dropdown for visual + interaction
+   consistency with the bell. */
+.navbar-profile-container {
+  position: relative;
+}
+
+.navbar-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+  border-radius: 999px;
+  transition: background var(--dur-fast) ease;
+}
+
+.navbar-profile-btn:hover {
+  background: var(--color-bg);
+}
+
+.navbar-profile-name-wrap {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.navbar-profile-chevron {
+  display: inline-flex;
+  color: var(--color-text-muted);
+  margin-left: 0.1rem;
+}
+
+@media (min-width: 640px) {
+  .navbar-profile-name-wrap {
+    display: flex;
+  }
+}
+
+.navbar-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 220px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow-lg);
+  overflow: hidden;
+  z-index: 40;
+}
+
+.navbar-profile-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.navbar-profile-dropdown-name {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-profile-dropdown-role {
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+
+.navbar-profile-dropdown-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.navbar-profile-dropdown-link:hover {
+  background: var(--color-bg);
+}
+
+.navbar-profile-dropdown-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--color-danger);
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.navbar-profile-dropdown-logout:hover {
+  background: var(--color-danger-bg);
+}
+
+/* --- Notification bell (PHASE 3) --- */
+.notif-bell-container {
+  position: relative;
+}
+
+.notif-bell-btn {
+  background: var(--color-surface);
+  box-shadow: var(--neu-shadow);
+  border: none;
+  border-radius: var(--radius);
+  width: 36px;
+  height: 36px;
+  color: var(--color-text-secondary);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow-lg);
+  overflow: hidden;
+  z-index: 40;
+}
+
+.notif-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.notif-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notif-item {
+  display: block;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--color-bg);
+  text-decoration: none;
+  color: inherit;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item-unread {
+  background: var(--color-primary-bg);
+}
+
+.notif-item-message {
+  margin: 0 0 0.2rem;
+  font-size: 0.82rem;
+  color: var(--color-text);
+}
+
+.notif-item-time {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+
+/* --- Pagination bar --- */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* --- Avatars: navbar, table rows, profile page --- */
+.navbar-avatar,
+.table-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-primary-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.table-avatar {
+  width: 26px;
+  height: 26px;
+}
+
+.navbar-avatar img,
+.table-avatar img,
+.profile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-header-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-photo {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-primary-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.profile-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--dur-fast, 0.15s) ease;
+}
+
+.profile-photo:hover .profile-photo-overlay {
+  opacity: 1;
+}
+
+/* PHASE 6: product/category photo thumbnails. Reuses .profile-photo's
+   layout (relative positioning, hover overlay) via profile-photo-small,
+   but rounded-square instead of circular - a product/category photo
+   isn't a person's avatar. */
+.profile-photo-small {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md, 10px);
+  font-size: 0.7rem;
+}
+
+.profile-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.product-photo-field {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+/* Small square thumbnail used inside data tables (Products page) */
+.table-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  background: var(--color-primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.table-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.table-thumb-placeholder {
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+/* PHASE 21: small round initials avatar for name cells that have no
+   photo (Customers table) - a lighter-weight sibling of .table-thumb. */
+.cell-with-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.table-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary-gradient);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* PHASE 6: Product Details modal - simple two-column key/value grid */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.detail-grid-full {
+  grid-column: 1 / -1;
+}
+
+.detail-item-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 0.15rem;
+}
+
+.detail-item-value {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.detail-photo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+/* PHASE 8: invoice print support. When printing (Ctrl+P / the invoice's
+   "Print / Download" button, which just calls window.print()), hide
+   everything on the page except the invoice content itself, so the
+   printout is a clean invoice - not the whole app chrome. */
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .invoice-print-area,
+  .invoice-print-area * {
+    visibility: visible;
+  }
+  .invoice-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   General page layout
+   ========================================================================== */
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}

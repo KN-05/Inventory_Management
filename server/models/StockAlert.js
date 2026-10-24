@@ -24,4 +24,10 @@ const stockAlertSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// PERFORMANCE: alerts are listed by status (newest first), the dashboard/sidebar
+// count the active ones, and Product's save hook looks up
+// "active alert for this product".
+stockAlertSchema.index({ status: 1, createdAt: -1 });
+stockAlertSchema.index({ product: 1, status: 1 });
+
 module.exports = mongoose.model('StockAlert', stockAlertSchema);

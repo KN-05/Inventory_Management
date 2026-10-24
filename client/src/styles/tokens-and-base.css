@@ -1,0 +1,90 @@
+/* styles/tokens-and-base.css - Design tokens (CSS variables), reset and base typography.
+   Part of the split of the old AppStyles.jsx; import ORDER matters (see index.css). */
+
+/* src/index.css
+   Phase 1 (revised) — "G+F combo" design pass: soft neumorphic content
+   surfaces (dual-shadow, borderless cards) paired with a gradient sidebar
+   per role, plus hover-lift, entrance, and press-feedback animations.
+
+   Design system in short:
+   - Content area: a soft neumorphic light-gray canvas (#eef1f5). Cards,
+     stat tiles, and badges use a light "raised" dual-shadow instead of a
+     hard border - one shadow going dark-down-right, one light-up-left,
+     against the same background colour as the page. This means cards
+     read as physically raised without adding visual clutter (no border
+     lines competing with table borders, etc).
+   - Sidebar: a deep gradient per role (purple→navy for Admin, teal→blue
+     for Manager, amber→brown for Staff) instead of a flat dark colour -
+     the one deliberately rich surface in an otherwise restrained UI.
+   - Buttons: primary actions use a gradient fill matching the sidebar,
+     with a soft colour-matched glow shadow.
+   - Motion: cards lift on hover, page sections fade/slide in on mount,
+     buttons give a small press-scale on click. All via CSS transitions/
+     keyframes - no animation library needed.
+   - Inter for UI text; JetBrains Mono for anything that reads like a
+     warehouse record - SKUs, quantities, prices, stat numbers. */
+
+:root {
+  /* Color - modern SaaS palette. A light slate page canvas with
+     pure-white raised surfaces (cards/tables/sidebar-navbar), a single
+     professional indigo accent used everywhere. */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-bg: #eef2ff;
+  --color-primary-gradient: #4f46e5;
+
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --sidebar-gradient: #0f172a;
+  --sidebar-bg-active: rgba(255, 255, 255, 0.08);
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+  --sidebar-section-label: #8794a8;
+  --sidebar-accent: #818cf8;
+
+  /* Kept the same variable names every card/table/button/input already
+     references - redefined to a clean bordered-card treatment instead
+     of a neumorphic dual shadow. */
+  --neu-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --neu-shadow-inset: inset 0 0 0 1px var(--color-border);
+  --neu-shadow-lg: 0 0 0 1px var(--color-border), 0 12px 28px rgba(15, 23, 42, 0.1);
+
+  /* Type */
+  --font-ui: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Layout */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --sidebar-width: 240px;
+  --navbar-height: 60px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 0.15s;
+  --dur-base: 0.25s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0.001ms;
+    --dur-base: 0.001ms;
+  }
+}

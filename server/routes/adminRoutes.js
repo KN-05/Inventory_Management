@@ -5,6 +5,7 @@
 // of once for the whole router.
 
 const express = require('express');
+const { otpLimiter } = require('../middleware/rateLimiters');
 const { body } = require('express-validator');
 const router = express.Router();
 
@@ -101,11 +102,13 @@ router.get('/staff-list', authorize('admin', 'manager'), getStaffList);
 router.post(
   '/users/:id/staff-password-reset/request-otp',
   authorize('manager'),
+  otpLimiter,
   requestStaffPasswordResetOtp
 );
 router.post(
   '/users/:id/staff-password-reset/confirm',
   authorize('manager'),
+  otpLimiter,
   runValidation([
     body('otp').notEmpty().withMessage('Verification code is required'),
     body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),

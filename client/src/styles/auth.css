@@ -1,0 +1,651 @@
+/* styles/auth.css - Login / Register pages (including the Login redesign).
+   Part of the split of the old AppStyles.jsx; import ORDER matters (see index.css). */
+
+/* ==========================================================================
+   Auth pages (Login/Register) - outside the app shell
+   ========================================================================== */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--color-bg);
+}
+
+/* PHASE 14 (login redesign): split-screen layout - form on the left,
+   an illustrated gradient panel on the right (hidden on narrow screens,
+   where there's no room for a decorative panel next to the form). */
+.auth-split-card {
+  width: 100%;
+  max-width: 880px;
+  min-height: 560px;
+  display: flex;
+  background: var(--color-surface);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--neu-shadow-lg);
+}
+
+.auth-split-form-side {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  min-width: 0;
+}
+
+.auth-split-illustration-side {
+  flex: 1 1 50%;
+  position: relative;
+  background: var(--sidebar-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .auth-split-illustration-side {
+    display: none;
+  }
+  .auth-split-form-side {
+    padding: 1.75rem;
+  }
+}
+
+.auth-floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.auth-illustration-caption {
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+  right: 2rem;
+  color: #fff;
+  text-align: center;
+}
+
+.auth-illustration-caption h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.3rem;
+}
+
+.auth-illustration-caption p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 360px;
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+/* BUGFIX: ForgotPassword.jsx/ResetPassword.jsx use just ".auth-form"
+   directly inside ".auth-page" (no split-card wrapper like Login/
+   Register), which relied on ".auth-form" ITSELF providing the visible
+   card (background/padding/shadow). That card styling moved to
+   ".auth-split-card"/".auth-split-form-side" when Login was redesigned,
+   which silently broke these two pages (no visible card, no padding).
+   Add this second class alongside "auth-form" to restore a standalone
+   card look for pages that don't use the split layout. */
+.auth-standalone-card {
+  background: var(--color-surface);
+  padding: 2rem;
+  box-shadow: var(--neu-shadow-lg);
+}
+
+.auth-form h1 {
+  margin: 0 0 1.25rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.auth-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--color-primary-gradient);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.auth-brand-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.auth-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  margin: 0 0 1rem;
+  line-height: 1.4;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+}
+
+.password-field input {
+  flex: 1;
+  padding-right: 3.2rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.auth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: auto;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.auth-link-small {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-link-small:hover {
+  text-decoration: underline;
+}
+
+/* Each label + input pair sits in its own wrapper <div> (for the staggered
+   entrance), so the label must be a block and the input full width -
+   otherwise they line up side by side at different widths. */
+.auth-form label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.3rem;
+}
+
+.auth-form input,
+.auth-form select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+  transition: box-shadow var(--dur-fast) ease;
+}
+
+/* BUGFIX: this used to be ".auth-form button", which matched EVERY
+   button inside the form - including the small password Show/Hide
+   toggle - giving it this same purple gradient/padding/margin-top and
+   making it look like a big detached pill floating above the password
+   field. Scoped to a dedicated class so it only styles the actual
+   submit button. */
+.auth-submit-btn {
+  margin-top: 1.25rem;
+  padding: 0.65rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-gradient);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) ease;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.auth-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-form p {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.auth-form a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.form-error {
+  background: var(--color-bg);
+  box-shadow: var(--neu-shadow-inset);
+  color: var(--color-danger);
+  border-left: 3px solid var(--color-danger);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+/* ==========================================================================
+   PHASE 15: Login page redesign (Khatabook-inspired reference, scoped
+   ONLY to Login.jsx via "login-" prefixed classes)
+   ==========================================================================
+   Nothing here touches ".auth-*" (still used unchanged by Register,
+   ForgotPassword, ResetPassword) or any app-shell/dashboard rule. Visual
+   direction taken from the Khatabook reference screenshots - light
+   lavender page background, a large rounded white card, a purple/violet
+   primary accent, generous spacing, soft single-layer shadows - rebuilt
+   from scratch with original inventory-management content (no Khatabook
+   text, images, or logos). Motion is a single fast entrance only; there
+   is no continuous/floating animation anywhere in this block. */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: #f1f5f9;
+}
+
+.login-shell {
+  width: 100%;
+  max-width: 940px;
+  min-height: 580px;
+  display: flex;
+  background: #ffffff;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 60px -20px rgba(49, 46, 129, 0.16), 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.login-form-side {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 3rem;
+  min-width: 0;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 1.75rem;
+}
+
+.login-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #4f46e5;
+}
+
+.login-brand-text {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1e2433;
+  letter-spacing: -0.01em;
+}
+
+.login-heading {
+  margin: 0 0 0.4rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #1e2433;
+  letter-spacing: -0.02em;
+}
+
+.login-subheading {
+  margin: 0 0 1.75rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.login-error {
+  background: #fef2f2;
+  color: #be123c;
+  border-left: 3px solid #be123c;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.1rem;
+}
+
+.login-field label {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.4rem;
+}
+
+.login-input {
+  padding: 0.75rem 0.9rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #f9fafb;
+  color: #1e2433;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-input::placeholder {
+  color: #9ca3af;
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+}
+
+.login-password-wrap {
+  position: relative;
+  display: flex;
+}
+
+.login-password-input {
+  flex: 1;
+  padding-right: 2.75rem;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.login-password-toggle:hover {
+  color: #4f46e5;
+  background: #eef2ff;
+}
+
+.login-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+}
+
+.login-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-checkbox input {
+  width: 15px;
+  height: 15px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.login-forgot-link {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-forgot-link:hover {
+  text-decoration: underline;
+}
+
+.login-submit-btn {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.login-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-footer {
+  margin-top: 1.4rem;
+  font-size: 0.88rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.login-footer a {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ---------------- Right side: inventory dashboard mockup ---------------- */
+
+.login-illustration-side {
+  flex: 1 1 50%;
+  position: relative;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: 2.5rem;
+  overflow: hidden;
+}
+
+/* Clean, no-fake-data brand panel: an icon badge, headline copy, and a
+   row of feature "pills" naming what the system covers - no numbers,
+   no mock dashboard content. */
+.login-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  position: relative;
+  z-index: 1;
+}
+
+.login-illustration-caption {
+  text-align: center;
+  max-width: 320px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 320px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+}
+
+.login-illustration-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.login-illustration-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+/* Tablet: compact two columns - tighter padding, smaller card min-height */
+@media (max-width: 900px) {
+  .login-shell {
+    max-width: 720px;
+    min-height: 0;
+  }
+  .login-form-side {
+    padding: 2.25rem 2rem;
+  }
+  .login-illustration-side {
+    padding: 2rem 1.5rem;
+    gap: 1.25rem;
+  }
+  .login-badge {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+/* Mobile: form first, illustration hidden - no horizontal scrolling */
+@media (max-width: 760px) {
+  .login-page {
+    padding: 1rem;
+  }
+  .login-shell {
+    flex-direction: column;
+    border-radius: 22px;
+  }
+  .login-illustration-side {
+    display: none;
+  }
+  .login-form-side {
+    padding: 2rem 1.5rem;
+  }
+  .login-form {
+    max-width: none;
+  }
+}
