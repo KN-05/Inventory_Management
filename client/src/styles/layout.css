@@ -20,6 +20,8 @@
 
 .app-content {
   flex: 1;
+  width: 100%;
+  min-width: 0; /* lets the content shrink instead of pushing the page wider */
 }
 
 /* --- Sidebar --- */
@@ -886,10 +888,19 @@
 /* ==========================================================================
    General page layout
    ========================================================================== */
+/* ONE page container for every screen. It used to be `max-width: 1100px;
+   margin: 0 auto`, which pinned every page to a 1100px column in the middle
+   of the screen - at low browser zoom (a wide viewport) that left huge empty
+   margins on both sides. It now fills the space next to the sidebar; grids
+   inside (KPI strips, chart grids, dashboard columns) reflow by themselves.
+   Padding grows a little with the viewport but never below 0.85rem. */
 .page {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1.5rem;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+  padding: clamp(0.85rem, 1.6vw, 1.75rem);
 }
 
 .page-header {

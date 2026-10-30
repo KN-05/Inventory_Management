@@ -52,6 +52,13 @@ const otpLimiter = limiter({
   message: 'Too many verification attempts. Please wait 10 minutes and try again.',
 });
 
+// New accounts: 10 sign-ups per hour per IP.
+const signupLimiter = limiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  message: 'Too many sign-up attempts. Please try again in an hour.',
+});
+
 // Safety net for the whole API. Generous on purpose (a dashboard load makes
 // ~10 requests); it only stops scripts hammering the server. Override with
 // API_RATE_LIMIT in .env.
@@ -61,4 +68,4 @@ const apiLimiter = limiter({
   message: 'Too many requests. Please slow down and try again shortly.',
 });
 
-module.exports = { loginLimiter, passwordResetLimiter, otpLimiter, apiLimiter };
+module.exports = { loginLimiter, passwordResetLimiter, otpLimiter, signupLimiter, apiLimiter };

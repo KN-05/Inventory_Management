@@ -12,9 +12,10 @@ const {
   forgotPassword,
   resetPassword,
 } = require('../controllers/authController');
+const { googleAuth, signupWithEmail } = require('../controllers/accountController');
 const { runValidation } = require('../middleware/validateMiddleware');
 const { protect } = require('../middleware/authMiddleware');
-const { loginLimiter, passwordResetLimiter } = require('../middleware/rateLimiters');
+const { loginLimiter, passwordResetLimiter, signupLimiter } = require('../middleware/rateLimiters');
 
 // POST /api/auth/register
 // PHASE 2: no `role` validator here anymore, and this route now only
@@ -49,6 +50,29 @@ router.post(
 );
 
 // POST /api/auth/logout - requires a valid token
+// Google sign-in / sign-up (the Google token is verified on the server)
+router.post(
+  '/google',
+  loginLimiter,
+  runValidation([
+    body('credential').isString().notEmpty().withMessage('Google credential is required'),
+    body('intent').optional().isIn(['signin', 'signup']).withMessage('Invalid intent'),
+  ]),
+  googleAuth
+);
+
+// New business account with e-mail + password (alternative to Google)
+router.post(
+  '/signup',
+  signupLimiter,
+  runValidation([
+    body('name').trim().isLength({ min: 2, max: 60 }).withMessage('Name must be 2 to 60 characters'),
+    body('email').isEmail().withMessage('A valid email is required'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  ]),
+  signupWithEmail
+);
+
 router.post('/logout', protect, logoutUser);
 
 // GET /api/auth/me - requires a valid token

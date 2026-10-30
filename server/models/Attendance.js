@@ -64,4 +64,7 @@ const attendanceSchema = new mongoose.Schema(
 attendanceSchema.index({ user: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ date: 1 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+attendanceSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('Attendance', attendanceSchema);

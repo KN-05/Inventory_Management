@@ -174,7 +174,7 @@ function UserManagement() {
         title="User Management"
         subtitle={
           isAdmin
-            ? 'Create accounts, assign roles, and control who can sign in'
+            ? 'Create Manager/Staff accounts and control who can sign in'
             : 'Activate or deactivate Staff and Manager accounts'
         }
         actions={
@@ -220,7 +220,7 @@ function UserManagement() {
       ) : visibleUsers.length === 0 ? (
         <p className="empty-state">No users match your search.</p>
       ) : (
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead>
             <tr>
               <th></th>
@@ -262,7 +262,7 @@ function UserManagement() {
                       >
                         <option value="staff">Staff</option>
                         <option value="manager">Accountant/Manager</option>
-                        <option value="admin">Admin</option>
+                        {u.role === 'admin' && <option value="admin" disabled>Admin (separate business)</option>}
                       </select>
                     ) : (
                       <span className={roleBadgeClass[u.role] || 'badge'}>{roleLabel(u.role)}</span>
@@ -296,7 +296,7 @@ function UserManagement() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       {isAdmin && (

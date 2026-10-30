@@ -96,7 +96,7 @@ function CategoryForm({ open, category, onSubmit, onCancel, onUploadImage, error
 
         {!category && (
           <p className="page-subtitle" style={{ marginTop: '-0.5rem' }}>
-            You can add a photo after saving.
+            
           </p>
         )}
 

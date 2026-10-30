@@ -119,7 +119,7 @@ function Analytics() {
         {sales.topProducts.length === 0 ? (
           <p className="empty-state">No sales recorded yet.</p>
         ) : (
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr>
                 <th>Product</th>
@@ -138,7 +138,7 @@ function Analytics() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -174,7 +174,7 @@ function Analytics() {
         {purchases.supplierWise.length === 0 ? (
           <p className="empty-state">No received purchases yet.</p>
         ) : (
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr>
                 <th>Supplier</th>
@@ -191,7 +191,7 @@ function Analytics() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -226,7 +226,7 @@ function Analytics() {
             {profit.productWise.length === 0 ? (
               <p className="empty-state">No completed sales yet.</p>
             ) : (
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th>Product</th>
@@ -243,7 +243,7 @@ function Analytics() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
 
@@ -252,7 +252,7 @@ function Analytics() {
             {profit.categoryWise.length === 0 ? (
               <p className="empty-state">No completed sales yet.</p>
             ) : (
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th>Category</th>
@@ -269,7 +269,7 @@ function Analytics() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         </div>

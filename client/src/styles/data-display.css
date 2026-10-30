@@ -21,6 +21,40 @@
   font-size: 0.88rem;
 }
 
+/* Every table sits in .table-scroll. A table that is wider than its card
+   (many columns, long names, high browser zoom) scrolls INSIDE this box
+   instead of making the whole page scroll sideways. `position: relative`
+   matters: visually-hidden helper text inside a cell is absolutely
+   positioned, and without a positioned ancestor it would be measured from
+   the page and stretch the page's scroll width. */
+.table-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow);
+}
+
+.table-scroll > .data-table {
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.panel .table-scroll {
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.panel-scroll,
+.products-table-wrap {
+  position: relative;
+}
+
 .data-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -57,7 +91,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-.data-table th.col-numeric {
+.data-table th.col-numeric,
+.data-table td.cell-numeric {
+  /* td needs the .data-table prefix: the generic `.data-table td { text-align: left }`
+     above is more specific than a bare .cell-numeric and used to win, leaving
+     numbers left-aligned under right-aligned headers. */
   text-align: right;
 }
 

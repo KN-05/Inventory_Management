@@ -54,4 +54,7 @@ const customerSchema = new mongoose.Schema(
 
 customerSchema.index({ name: 1 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+customerSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('Customer', customerSchema);

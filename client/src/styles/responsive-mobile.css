@@ -49,10 +49,9 @@
      the <table> itself a horizontally-scrollable block is the standard
      no-JS fix - the table's internal row/cell layout is unaffected,
      scrolling reveals the rest. */
+  /* The table stays a real table (so columns keep their widths); its
+     .table-scroll wrapper provides the horizontal scrolling. */
   .data-table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     white-space: nowrap;
   }
 
@@ -355,6 +354,12 @@ a.kpi:hover {
 }
 
 @media (max-width: 700px) {
+  /* narrow 2-column cells: let a long label ("Out of stock items") wrap
+     instead of being cut off with an ellipsis */
+  .kpi-label {
+    white-space: normal;
+  }
+
   .kpi-grid-3 {
     grid-template-columns: minmax(0, 1fr);
   }

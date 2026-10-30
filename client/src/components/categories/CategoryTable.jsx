@@ -11,7 +11,7 @@ function CategoryTable({ categories, canManage, onEdit, onDelete }) {
   }
 
   return (
-    <table className="data-table">
+    <div className="table-scroll"><table className="data-table">
       <thead>
         <tr>
           <th></th>
@@ -59,7 +59,7 @@ function CategoryTable({ categories, canManage, onEdit, onDelete }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 

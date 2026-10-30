@@ -20,7 +20,7 @@ function PurchaseDetailsModal({ open, purchase, onClose }) {
         {purchase.createdBy?.name || '-'} on {new Date(purchase.createdAt).toLocaleDateString()}
       </p>
 
-      <table className="data-table" style={{ marginTop: '0.75rem' }}>
+      <div className="table-scroll" style={{ marginTop: '0.75rem' }}><table className="data-table">
         <thead>
           <tr>
             <th>Product</th>
@@ -42,7 +42,7 @@ function PurchaseDetailsModal({ open, purchase, onClose }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
 
       <div className="detail-grid" style={{ marginTop: '1rem' }}>
         <div>

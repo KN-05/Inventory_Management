@@ -129,7 +129,7 @@ function ReorderTab({ data }) {
       {data.suggestions.length === 0 ? (
         <p className="empty-state">Nothing needs reordering right now - stock levels look healthy.</p>
       ) : (
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead>
             <tr>
               <th>Product</th>
@@ -160,7 +160,7 @@ function ReorderTab({ data }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
     </div>
   );
@@ -250,7 +250,7 @@ function AnomaliesTab({ data }) {
         {data.dayAnomalies.length === 0 ? (
           <p className="empty-state">No unusual sales days detected in the last 30 days.</p>
         ) : (
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -277,7 +277,7 @@ function AnomaliesTab({ data }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -289,7 +289,7 @@ function AnomaliesTab({ data }) {
         {data.productSpikes.length === 0 ? (
           <p className="empty-state">No unusual product demand spikes right now.</p>
         ) : (
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr>
                 <th>Product</th>
@@ -312,7 +312,7 @@ function AnomaliesTab({ data }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </>
@@ -373,7 +373,7 @@ function AssistantTab() {
             </p>
 
             {h.products && h.products.length > 0 && (
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th>Product</th>
@@ -394,11 +394,11 @@ function AssistantTab() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
 
             {h.topProducts && h.topProducts.length > 0 && (
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th>Product</th>
@@ -413,7 +413,7 @@ function AssistantTab() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         ))}

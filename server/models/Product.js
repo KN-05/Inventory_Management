@@ -29,7 +29,6 @@ const productSchema = new mongoose.Schema(
     sku: {
       type: String,
       required: [true, 'SKU is required'],
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -39,8 +38,6 @@ const productSchema = new mongoose.Schema(
     // documents that DO have a barcode value need to be distinct.
     barcode: {
       type: String,
-      unique: true,
-      sparse: true,
       trim: true,
     },
     // PHASE 6: relative URL path to an uploaded product photo, e.g.
@@ -241,6 +238,14 @@ productSchema.post('save', async function (doc) {
   }
 });
 
+// SKU and barcode are unique PER BUSINESS. (A barcode is optional, so only
+// products that have one take part in the unique index.)
+productSchema.index({ business: 1, sku: 1 }, { unique: true });
+productSchema.index(
+  { business: 1, barcode: 1 },
+  { unique: true, partialFilterExpression: { barcode: { $type: 'string' } } }
+);
+
 // PERFORMANCE: indexes for the queries the app actually runs. Without them
 // MongoDB reads EVERY product for each of these. (sku and barcode are already
 // indexed by `unique: true`.)
@@ -254,5 +259,8 @@ productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ category: 1 });
 productSchema.index({ supplier: 1 });
 productSchema.index({ createdAt: -1 });
+
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+productSchema.plugin(require('../plugins/tenantScope'));
 
 module.exports = mongoose.model('Product', productSchema);

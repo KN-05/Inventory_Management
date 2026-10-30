@@ -30,4 +30,7 @@ const stockAlertSchema = new mongoose.Schema(
 stockAlertSchema.index({ status: 1, createdAt: -1 });
 stockAlertSchema.index({ product: 1, status: 1 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+stockAlertSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('StockAlert', stockAlertSchema);

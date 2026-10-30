@@ -15,6 +15,7 @@ const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
 const StockMovement = require('../models/StockMovement');
 const { applyStockChanges, findStockLimitViolation } = require('../utils/stockService');
+const { createWithGeneratedNumber } = require('../utils/createWithRetry');
 
 // Recomputes each line item's subtotal + the purchase's totalAmount from
 // scratch, server-side - never trusts totals sent by the client.
@@ -108,16 +109,20 @@ const createPurchase = asyncHandler(async (req, res) => {
   }
 
   const { computedItems, totalAmount } = computeTotals(items, discount, tax);
-  const purchaseNumber = await generateUniquePurchaseNumber();
-
-  const purchase = await Purchase.create({
-    purchaseNumber,
-    supplier,
-    items: computedItems,
-    discount,
-    tax,
-    totalAmount,
-    createdBy: req.user._id,
+  // number + insert together; re-numbered if a simultaneous request took the same one
+  const purchase = await createWithGeneratedNumber({
+    field: 'purchaseNumber',
+    generate: generateUniquePurchaseNumber,
+    create: (purchaseNumber) =>
+      Purchase.create({
+        purchaseNumber,
+        supplier,
+        items: computedItems,
+        discount,
+        tax,
+        totalAmount,
+        createdBy: req.user._id,
+      }),
   });
 
   await logActivity(
@@ -275,7 +280,7 @@ const receivePurchase = asyncHandler(async (req, res) => {
   const claimed = await Purchase.findOneAndUpdate(
     { _id: purchase._id, status: 'pending' },
     { status: 'received', receivedDate: new Date() },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!claimed) {
     res.status(400);

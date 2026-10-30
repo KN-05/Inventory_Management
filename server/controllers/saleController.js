@@ -16,6 +16,7 @@ const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const StockMovement = require('../models/StockMovement');
 const { applyStockChanges, rollbackStockChanges, findStockLimitViolation } = require('../utils/stockService');
+const { createWithGeneratedNumber } = require('../utils/createWithRetry');
 
 // @desc   Get all sales, with optional filters + pagination
 // @route  GET /api/sales?customer=&status=&search=&page=&limit=
@@ -147,8 +148,6 @@ const createSale = asyncHandler(async (req, res) => {
     supplyType === 'inter' ? 'inter' : 'intra'
   );
   const totalAmount = gst.totals.grandTotal;
-  const invoiceNumber = await generateUniqueInvoiceNumber();
-
   // STEP 1 - reserve the stock. Each product is decreased with an ATOMIC
   // "take N only if at least N are there" update, so two cashiers selling the
   // last unit at the same moment can never both succeed (the check above is
@@ -169,7 +168,13 @@ const createSale = asyncHandler(async (req, res) => {
   // STEP 2 - write the sale. If this fails, give the stock back.
   let sale;
   try {
-    sale = await Sale.create({
+    // The invoice number is generated and inserted together, and re-generated
+    // if another sale took the same number a moment earlier.
+    sale = await createWithGeneratedNumber({
+      field: 'invoiceNumber',
+      generate: generateUniqueInvoiceNumber,
+      create: (invoiceNumber) =>
+    Sale.create({
       invoiceNumber,
       customer: customer || null,
       items: computedItems.map(({ _productDoc, ...rest }, index) => ({ ...rest, ...gst.lines[index] })),
@@ -186,6 +191,7 @@ const createSale = asyncHandler(async (req, res) => {
       paymentMethod,
       paymentStatus,
       soldBy: req.user._id,
+    }),
     });
   } catch (err) {
     await rollbackStockChanges(reservation.applied);
@@ -245,7 +251,7 @@ const cancelSale = asyncHandler(async (req, res) => {
   const sale = await Sale.findOneAndUpdate(
     { _id: req.params.id, status: 'completed' },
     { status: 'cancelled' },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!sale) {
     const exists = await Sale.exists({ _id: req.params.id });

@@ -1,8 +1,6 @@
 // src/pages/admin/CreateUserForm.jsx
-// PHASE 2: lets an Admin create a Manager (Accountant/Manager) or Staff
-// account directly - since public self-registration is now closed once
-// an Admin exists (see authController.js), this is the only way new
-// accounts get created after the bootstrap Admin.
+// Lets an Admin create Manager/Staff accounts inside the current business.
+// Independent Admins must use the separate business sign-up/onboarding flow.
 
 import { useState } from 'react';
 import AnimatedModal from '../../components/common/AnimatedModal';
@@ -32,8 +30,8 @@ function CreateUserForm({ open, onSubmit, onCancel, error }) {
       <h2>Create User</h2>
 
       <p className="page-subtitle" style={{ marginBottom: '0.75rem' }}>
-        Creates an Accountant/Manager or Staff account directly. To make someone Admin, create
-        them here as any role first, then change their role from the user table.
+        Creates an Accountant/Manager or Staff account inside your business. An independent Admin
+        must create a separate business account using the New User sign-up flow.
       </p>
 
       {error && <p className="form-error">{error}</p>}

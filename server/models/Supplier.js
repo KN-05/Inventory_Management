@@ -79,4 +79,7 @@ supplierSchema.virtual('products', {
   foreignField: 'supplier',
 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+supplierSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('Supplier', supplierSchema);

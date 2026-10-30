@@ -61,4 +61,7 @@ const stockMovementSchema = new mongoose.Schema(
 // looked up "for this product, most recent first" - index accordingly.
 stockMovementSchema.index({ product: 1, createdAt: -1 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+stockMovementSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('StockMovement', stockMovementSchema);

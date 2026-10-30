@@ -44,14 +44,15 @@ const getCategoryById = asyncHandler(async (req, res) => {
 // @access Private (Admin + Manager, per CATEGORIES_CREATE)
 const createCategory = asyncHandler(async (req, res) => {
   const { name, description, status } = req.body;
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
 
-  const existing = await Category.findOne({ name });
+  const existing = await Category.findOne({ name: normalizedName });
   if (existing) {
     res.status(400);
     throw new Error('A category with this name already exists');
   }
 
-  const category = await Category.create({ name, description, status });
+  const category = await Category.create({ name: normalizedName, description, status });
 
   await logActivity(req.user._id, `Created category "${category.name}"`, 'category');
 
@@ -69,14 +70,15 @@ const updateCategory = asyncHandler(async (req, res) => {
   }
 
   const { name, description, status } = req.body;
+  const normalizedName = typeof name === 'string' ? name.trim() : name;
 
-  if (name && name !== category.name) {
-    const existing = await Category.findOne({ name });
+  if (normalizedName && normalizedName !== category.name) {
+    const existing = await Category.findOne({ name: normalizedName });
     if (existing) {
       res.status(400);
       throw new Error('A category with this name already exists');
     }
-    category.name = name;
+    category.name = normalizedName;
   }
 
   if (description !== undefined) category.description = description;

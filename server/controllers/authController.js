@@ -6,19 +6,8 @@ const generateToken = require('../utils/generateToken');
 const logActivity = require('../utils/logActivity');
 const sendEmail = require('../utils/sendEmail');
 const User = require('../models/User');
-
-// Shape the user object we send back to the frontend.
-// IMPORTANT: never include the password, even hashed.
-const formatUser = (user) => ({
-  id: user._id,
-  name: user.name,
-  email: user.email,
-  phone: user.phone,
-  photo: user.photo,
-  role: user.role,
-  isActive: user.isActive,
-  lastLogin: user.lastLogin,
-});
+const formatUser = require('../utils/formatUser');
+const { describeWorkspace } = require('../utils/workspaceState');
 
 // @desc   Register a new user
 // @route  POST /api/auth/register
@@ -101,11 +90,14 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const token = generateToken(user._id, user.role);
 
+  const workspace = await describeWorkspace(user);
   res.status(200).json({
     success: true,
     message: 'Login successful',
     token,
     user: formatUser(user),
+    workspace,
+    next: workspace.next,
   });
 });
 
@@ -130,9 +122,12 @@ const logoutUser = asyncHandler(async (req, res) => {
 // @access Private
 const getMe = asyncHandler(async (req, res) => {
   // req.user was set by the `protect` middleware
+  const workspace = await describeWorkspace(req.user);
   res.status(200).json({
     success: true,
     user: formatUser(req.user),
+    workspace,
+    next: workspace.next,
   });
 });
 

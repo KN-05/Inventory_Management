@@ -31,9 +31,23 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    // A 401 means "your session is no longer valid" - EXCEPT when it comes from
+    // the sign-in / sign-up / password-reset requests themselves, where it just
+    // means "wrong password" or "Google could not be verified". Those must stay
+    // on the page and show their message; reloading would wipe it.
+    const isAuthAttempt = /\/auth\/(login|google|signup|forgot-password|reset-password)/.test(error.config?.url || '');
+    if (error.response && error.response.status === 401 && !isAuthAttempt) {
       clearSession();
       window.location.href = '/login';
+    }
+    // The account is signed in but cannot use the app yet (see the backend's
+    // protect middleware): send the person to the page that fixes it.
+    const code = error.response?.data?.code;
+    if (code === 'SUBSCRIPTION_EXPIRED' && window.location.pathname !== '/renew') {
+      window.location.assign('/renew');
+    }
+    if (code === 'ONBOARDING_REQUIRED' && window.location.pathname !== '/onboarding') {
+      window.location.assign('/onboarding');
     }
     return Promise.reject(error);
   }

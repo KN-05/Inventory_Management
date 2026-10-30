@@ -109,7 +109,7 @@ function MonthNav({ month, today, onChange }) {
 // ---------------------------------------------------------------
 function DaysTable({ days, onEdit }) {
   return (
-    <table className="data-table">
+    <div className="table-scroll"><table className="data-table">
       <thead>
         <tr>
           <th>Date</th>
@@ -154,7 +154,7 @@ function DaysTable({ days, onEdit }) {
           );
         })}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 
@@ -422,7 +422,7 @@ function TeamAttendance({ canEdit }) {
           No staff or manager accounts to track yet.
         </p>
       ) : (
-        <table className="data-table" style={{ marginTop: '1rem' }}>
+        <div className="table-scroll" style={{ marginTop: '1rem' }}><table className="data-table">
           <thead>
             <tr>
               <th></th>
@@ -462,7 +462,7 @@ function TeamAttendance({ canEdit }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
     </Card>
   );

@@ -45,7 +45,8 @@ router.use(protect);
 
 // --- User management ---
 // PHASE 34: list + status toggle are now Admin + Manager; create, role
-// change, password reset, and delete remain Admin-only.
+// change, password reset, and delete remain Admin-only. Role changes are
+// limited to Manager/Staff; independent Admins must create their own business.
 router.get('/users', authorize('admin', 'manager'), getUsers);
 
 router.post(
@@ -78,8 +79,8 @@ router.patch(
   authorize('admin'),
   runValidation([
     body('role')
-      .isIn(['admin', 'manager', 'staff'])
-      .withMessage("Role must be 'admin', 'manager', or 'staff'"),
+      .isIn(['manager', 'staff'])
+      .withMessage("Role must be 'manager' or 'staff'. Create a separate business account to add an independent Admin."),
   ]),
   updateUserRole
 );

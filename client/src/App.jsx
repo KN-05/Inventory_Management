@@ -11,6 +11,7 @@ import RoleRoute from './components/common/RoleRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Loader from './components/common/Loader';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import StepRoute from './components/common/StepRoute';
 
 // PERFORMANCE: every page is loaded on demand (code splitting). Before, the
 // browser had to download the code for ALL pages - charts, admin screens, the
@@ -18,6 +19,8 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 // opened; the rest arrive when the user navigates there.
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/auth/Login'));
+const Onboarding = lazy(() => import('./pages/auth/Onboarding'));
+const Renew = lazy(() => import('./pages/auth/Renew'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
@@ -68,6 +71,25 @@ function App() {
               }
             />
             <Route path="/register" element={<Register />} />
+
+            {/* New-business sign-up steps and the renewal page. Each is
+                only reachable by the accounts it is meant for (StepRoute). */}
+            <Route
+              path="/onboarding"
+              element={
+                <StepRoute step="onboarding">
+                  <Onboarding />
+                </StepRoute>
+              }
+            />
+            <Route
+              path="/renew"
+              element={
+                <StepRoute step="renew">
+                  <Renew />
+                </StepRoute>
+              }
+            />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 

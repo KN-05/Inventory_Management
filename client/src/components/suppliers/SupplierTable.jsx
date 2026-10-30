@@ -10,7 +10,7 @@ function SupplierTable({ suppliers, canManage, onEdit, onDelete }) {
   }
 
   return (
-    <table className="data-table">
+    <div className="table-scroll"><table className="data-table">
       <thead>
         <tr>
           <th>Name</th>
@@ -54,7 +54,7 @@ function SupplierTable({ suppliers, canManage, onEdit, onDelete }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 

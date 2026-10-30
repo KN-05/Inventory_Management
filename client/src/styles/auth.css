@@ -649,3 +649,433 @@
     max-width: none;
   }
 }
+
+/* ==========================================================================
+   Sign-in choice (New user / Existing user), Google button, onboarding wizard,
+   plan cards and the renewal page. Uses the same tokens as the login page.
+   ========================================================================== */
+
+.auth-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0.25rem 0.1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-back-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+}
+.auth-back-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* two big choices */
+.auth-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  margin-top: 0.85rem;
+  padding: 1rem 1.1rem;
+  text-align: left;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.auth-choice:hover,
+.auth-choice:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+  outline: none;
+}
+.auth-choice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+.auth-choice-icon--alt {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+.auth-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+.auth-choice-text strong {
+  font-size: 1rem;
+}
+.auth-choice-text span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.auth-choice-text em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.auth-choice-arrow {
+  font-size: 1.6rem;
+  color: var(--color-text-muted);
+}
+
+/* "or" divider between Google and the e-mail form */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.auth-google {
+  margin-top: 1rem;
+  min-height: 44px;
+}
+.auth-google-holder {
+  display: flex;
+  justify-content: flex-start;
+  min-height: 44px;
+}
+.auth-google-holder.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.auth-google-note {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+/* ---------- onboarding / renewal pages ---------- */
+.onb-page {
+  min-height: 100vh;
+  padding: clamp(1rem, 3vw, 2.5rem);
+  box-sizing: border-box;
+  background: var(--color-bg);
+}
+.onb-shell {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.onb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.onb-user {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  min-width: 0;
+}
+.onb-user span {
+  overflow-wrap: anywhere;
+}
+
+.onb-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+.onb-steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.onb-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.8rem;
+}
+.onb-steps li.is-current {
+  color: var(--color-text);
+}
+.onb-steps li.is-current .onb-step-num,
+.onb-steps li.is-done .onb-step-num {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.onb-card {
+  width: 100%;
+  max-width: 640px;
+  box-sizing: border-box;
+  padding: clamp(1.1rem, 3vw, 2rem);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--neu-shadow);
+}
+.onb-card--wide {
+  max-width: none;
+}
+.onb-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+.onb-sub {
+  margin: 0 0 1.25rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.onb-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 0 1rem;
+}
+.onb-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.onb-actions--end {
+  justify-content: flex-end;
+}
+.onb-btn {
+  width: auto;
+  min-width: 160px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.onb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.onb-summary {
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.onb-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.onb-summary div:last-child {
+  border-bottom: none;
+}
+.onb-summary dt {
+  color: var(--color-text-secondary);
+}
+.onb-summary dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.onb-note {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.onb-note--info {
+  background: var(--color-primary-bg);
+  border-color: transparent;
+  color: var(--color-primary-hover);
+  margin-bottom: 1rem;
+}
+
+.renew-badge {
+  display: inline-block;
+  margin-bottom: 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ---------- plans ---------- */
+.plans-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--color-bg);
+}
+.plans-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.plans-toggle button.is-active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+.plans-save {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.68rem;
+}
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.25rem 1.1rem 1rem;
+  text-align: left;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.plan-card:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.plan-card.is-selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+.plan-badge {
+  position: absolute;
+  top: -0.65rem;
+  right: 0.9rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.plan-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.plan-tagline {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+.plan-price {
+  margin: 0.4rem 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+.plan-price small {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+.plan-features {
+  flex: 1;
+  margin: 0 0 0.75rem;
+  padding: 0 0 0 1.1rem;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.plan-select {
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.plan-card.is-selected .plan-select {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* the "IM" logo mark on the onboarding / renewal header (the login page draws an icon instead) */
+.onb-header .login-brand-icon {
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

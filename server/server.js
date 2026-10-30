@@ -70,6 +70,11 @@ app.get('/api/health', (req, res) => {
 // Generous overall request cap; login / reset / OTP have stricter ones on their routes.
 app.use('/api', apiLimiter);
 app.use('/api/auth', require('./routes/authRoutes'));
+// Business sign-up: onboarding steps, plans and the subscription status
+const { plansRouter, subscriptionRouter } = require('./routes/subscriptionRoutes');
+app.use('/api/onboarding', require('./routes/onboardingRoutes'));
+app.use('/api/plans', plansRouter);
+app.use('/api/subscription', subscriptionRouter);
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/suppliers', require('./routes/supplierRoutes'));

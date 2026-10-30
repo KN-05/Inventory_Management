@@ -160,7 +160,7 @@ function ImportCsvModal({ open, onClose, onImported }) {
           <p style={{ fontSize: '0.8rem', fontWeight: 600, margin: '0 0 0.4rem' }}>
             Preview of rows that would be created:
           </p>
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr>
                 <th>Row</th>
@@ -181,7 +181,7 @@ function ImportCsvModal({ open, onClose, onImported }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 

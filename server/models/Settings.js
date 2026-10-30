@@ -40,4 +40,7 @@ settingsSchema.statics.getOrCreate = async function () {
   return settings;
 };
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+settingsSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('Settings', settingsSchema);

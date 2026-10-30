@@ -7,6 +7,20 @@
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
+const Business = require('../models/Business');
+const { runInTenant } = require('../utils/tenantContext');
+
+// Is this request under one of these API prefixes? (req.baseUrl is the mount
+// path of the router the request came through, e.g. "/api/products".)
+const underPrefix = (req, prefixes) =>
+  prefixes.some((p) => req.baseUrl === p || (req.baseUrl || '').startsWith(`${p}/`));
+
+const blocked = (res, status, appCode, message) => {
+  res.status(status);
+  const err = new Error(message);
+  err.appCode = appCode;
+  return err;
+};
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
@@ -45,8 +59,28 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new Error('This account has been deactivated. Contact an administrator.');
   }
 
+  // --- New-business sign-up not finished: only the onboarding screens work ---
+  if (user.onboarding?.status === 'pending' && !underPrefix(req, ['/api/auth', '/api/plans', '/api/onboarding'])) {
+    throw blocked(res, 403, 'ONBOARDING_REQUIRED', 'Finish setting up your business to continue.');
+  }
+
+  // --- Business subscription / trial ran out: data is kept, access is paused ---
+  const business = user.business ? await Business.findById(user.business) : null;
+  if (business && !business.hasAccess() && !underPrefix(req, ['/api/auth', '/api/plans', '/api/subscription'])) {
+    throw blocked(
+      res,
+      402,
+      'SUBSCRIPTION_EXPIRED',
+      'Your subscription has expired. Renew to continue - your data is safe.'
+    );
+  }
+
   req.user = user; // available to every controller/middleware after this point
-  next();
+  req.business = business;
+
+  // From here on, every database query made for this request is limited to
+  // the user's own business (see utils/tenantContext.js).
+  return runInTenant(user.business, () => next());
 });
 
 module.exports = { protect };

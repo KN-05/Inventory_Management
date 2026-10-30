@@ -194,6 +194,47 @@ Stock changes go through `server/utils/stockService.js`, which uses atomic datab
 - Rate limits: 10 failed logins / 15 min / IP, 5 password-reset requests / hour, 6 staff-OTP attempts / 10 min. Behind a proxy (Render, Nginx…) set `TRUST_PROXY=1`. Counters are in memory, so they reset on restart and are not shared between several server instances.
 - `helmet` security headers are on; `?limit=` is capped at 1000; search text is regex-escaped.
 
+## Sign-in choices, new businesses and subscriptions
+
+The login page starts with two choices:
+
+- **New user - create a business account**: sign up with **Google** or with **e-mail + password**, then three steps (business details, choose a plan with monthly/yearly billing, review). Progress is saved on the server, so someone who leaves can sign in later and continue where they stopped. Pressing "Start free trial" creates the business and makes that person its **Admin** (never a platform-wide super admin).
+- **Existing user - sign in**: Google or the original e-mail + password form. Existing users are never sent through sign-up or plan selection again. A Google sign-in for an unknown e-mail is refused with a message (it does not silently create an account).
+
+After any sign-in the **server** says where the person belongs: dashboard, unfinished onboarding, or the renewal page (trial/subscription ended - data is kept, only access is paused).
+
+**Payment is NOT connected.** The plan pages are UI only: choosing a plan starts a free trial (`TRIAL_DAYS`, default 14) and the screens say that no charge is made. There is no fake "payment successful" anywhere. Until a real gateway is added, the platform owner extends a business by hand:
+
+```bash
+cd server
+node scripts/setSubscription.js owner@shop.com 30     # 30 more days, status "active"
+```
+
+### Data isolation between businesses
+Every inventory collection (products, categories, suppliers, sales, purchases, customers, stock alerts/movements, notifications, activity logs, attendance, settings, users) carries a `business` field. A Mongoose plugin (`server/plugins/tenantScope.js`) plus the request context (`server/utils/tenantContext.js`, set in the `protect` middleware) adds `business = <your business>` to **every** query and stamps every new document - so one business cannot read, edit, delete or count another's data even by guessing ids. Everything that existed before this feature stays in the "original workspace" (no `business` field) and keeps working for the original users, unchanged.
+
+### Setting up Google sign-in
+1. Google Cloud Console -> APIs & Services -> Credentials -> *Create credentials -> OAuth client ID -> Web application*.
+2. Under *Authorized JavaScript origins* add your site (e.g. `http://localhost:5173` and your production address).
+3. Put the Client ID in **both** `server/.env` (`GOOGLE_CLIENT_ID`) and `client/.env` (`VITE_GOOGLE_CLIENT_ID`), then restart both. Leave them empty to hide Google and use e-mail only.
+
+The browser receives a Google ID token; the server verifies it with Google's official library (signature, expiry, and that it was issued for *your* client id) and requires a verified e-mail. A Google sign-in for an e-mail that already has a password account links to that same account.
+
+### Upgrading an existing database (one time)
+SKU, barcode, invoice number, purchase number and category name are now unique **per business**. Remove the old global unique indexes once, then restart the server:
+
+```bash
+cd server
+node scripts/migrateTenantIndexes.js
+```
+
+### Known limits
+- Online payment, invoices for subscriptions and automatic renewal are not built.
+- A user belongs to one business (no workspace switcher). A platform Super Admin role/console is not built.
+- E-mail sign-up does not verify the address (Google sign-up does).
+- Staff-account/feature limits shown on the plans are descriptive and are not enforced by the server.
+- Uploaded images are served from `/uploads` by (hard-to-guess) file name without a login check.
+
 ## Tests and lint
 
 ```bash
@@ -204,6 +245,8 @@ cd ../client
 npm run lint      # oxlint
 npm run build
 ```
+
+Set `MONGO_TEST_URI=mongodb://127.0.0.1:27017` (a throw-away database is created and dropped) to also run the real-MongoDB tests for sign-up, onboarding, subscription expiry and business isolation (`tests/tenant.mongo.test.js`); without it they are skipped.
 
 The server tests cover price/quantity limits, CSV import, stock adjustment, atomic sale / cancel / receive flows, login, token checks, role permissions, rate limiting and the dashboard summary. They use in-memory fakes, so they prove the logic but not MongoDB itself — also try a few real concurrent sales on a test database.
 

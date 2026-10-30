@@ -56,4 +56,7 @@ const notificationSchema = new mongoose.Schema(
 // "how many unread for my role" on every page.
 notificationSchema.index({ recipientRole: 1, isRead: 1, createdAt: -1 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+notificationSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('Notification', notificationSchema);

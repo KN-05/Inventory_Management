@@ -8,14 +8,16 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 
 function PublicRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, workspace } = useAuth();
 
   if (loading) {
     return <p style={{ padding: '2rem' }}>Loading...</p>;
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    // a signed-in person goes where they belong (finish setup / renew / dashboard)
+    const target = { onboarding: '/onboarding', renew: '/renew' }[workspace?.next] || '/dashboard';
+    return <Navigate to={target} replace />;
   }
 
   return children;

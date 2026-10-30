@@ -184,3 +184,20 @@ Enforced by the server on every route that can change them (create/update produc
 | `?limit=` on list endpoints | capped at 1000 (default 20) |
 
 CSV import rows that break a limit are reported in `errors[]` with the product name, the field (`quantity` or `price`) and the reason; the other rows still import.
+
+## Sign-up, onboarding and subscription
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/auth/google` | public | Body `{ credential, intent: "signin" \| "signup" }`. The Google ID token is verified on the server. `signup` creates a *pending* account; `signin` for an unknown e-mail returns 404. Returns `{ token, user, workspace, next }`. |
+| POST | `/api/auth/signup` | public | Body `{ name, email, password }` (min 8). Creates a *pending* account (role `staff`, no business). 409 if the e-mail exists. |
+| GET | `/api/plans` | public | The plans, `trialDays` and `paymentConnected: false`. |
+| GET | `/api/onboarding` | pending user | Saved progress (resume). |
+| PUT | `/api/onboarding/details` | pending user | `{ businessName, businessType?, gstin?, phone?, address? }` |
+| PUT | `/api/onboarding/plan` | pending user | `{ planId: starter\|growth\|pro, billingCycle: monthly\|yearly }` |
+| POST | `/api/onboarding/complete` | pending user | Creates the business (free trial) and makes the user its Admin. Idempotent: repeated/parallel calls create one business. Returns a new token. |
+| GET | `/api/subscription` | signed in | Plan + status (works even when expired). |
+
+`next` in sign-in/`/api/auth/me` responses is `dashboard`, `onboarding` or `renew`.
+
+Machine-readable `code` values added to error responses: `ONBOARDING_REQUIRED` (403: finish setting up the business first) and `SUBSCRIPTION_EXPIRED` (402: trial/subscription ended; data is kept). Only `/api/auth`, `/api/plans`, `/api/onboarding` (pending users) and `/api/subscription` (expired businesses) stay reachable in those states.

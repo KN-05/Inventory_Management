@@ -57,7 +57,7 @@ function Reports() {
             </div>
 
             <h4>By Category</h4>
-            <table className="data-table" style={{ marginBottom: '1rem' }}>
+            <div className="table-scroll" style={{ marginBottom: '1rem' }}><table className="data-table">
               <thead>
                 <tr>
                   <th>Category</th>
@@ -76,13 +76,13 @@ function Reports() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
 
             <h4>Low Stock Products ({stockReport.lowStockProducts.length})</h4>
             {stockReport.lowStockProducts.length === 0 ? (
               <p className="empty-state">None right now.</p>
             ) : (
-              <table className="data-table" style={{ marginBottom: '1rem' }}>
+              <div className="table-scroll" style={{ marginBottom: '1rem' }}><table className="data-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -103,14 +103,14 @@ function Reports() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
 
             <h4>Out of Stock Products ({stockReport.outOfStockProducts.length})</h4>
             {stockReport.outOfStockProducts.length === 0 ? (
               <p className="empty-state">None right now.</p>
             ) : (
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -127,14 +127,14 @@ function Reports() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
 
           {/* --- Supplier-wise Report --- */}
           <div className="chart-card">
             <h3>Supplier-wise Report</h3>
-            <table className="data-table">
+            <div className="table-scroll"><table className="data-table">
               <thead>
                 <tr>
                   <th>Supplier</th>
@@ -155,7 +155,7 @@ function Reports() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </>
       )}

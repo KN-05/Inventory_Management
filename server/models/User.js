@@ -29,9 +29,37 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      // A Google-only account has no password; every other account must have one.
+      required: [
+        function passwordRequired() {
+          return !this.googleId;
+        },
+        'Password is required',
+      ],
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // never return password field by default in queries
+    },
+    // Google account id (the verified `sub` claim of the Google ID token).
+    // Unique, so one Google account can only ever be one user here.
+    googleId: {
+      type: String,
+      default: undefined,
+      select: false,
+    },
+    // New business sign-up progress. `status: 'pending'` means the person has
+    // an account but has not finished creating their business yet: they can
+    // only use the onboarding screens until they do. Old accounts have no
+    // `onboarding` at all.
+    onboarding: {
+      status: { type: String, enum: ['pending', 'complete'], default: undefined },
+      step: { type: String, enum: ['details', 'plan', 'review', 'done'], default: undefined },
+      businessName: { type: String, trim: true, maxlength: 80, default: undefined },
+      businessType: { type: String, trim: true, maxlength: 60, default: undefined },
+      gstin: { type: String, trim: true, uppercase: true, maxlength: 15, default: undefined },
+      phone: { type: String, trim: true, maxlength: 20, default: undefined },
+      address: { type: String, trim: true, maxlength: 200, default: undefined },
+      planId: { type: String, enum: ['starter', 'growth', 'pro'], default: undefined },
+      billingCycle: { type: String, enum: ['monthly', 'yearly'], default: undefined },
     },
     phone: {
       type: String,
@@ -118,5 +146,11 @@ userSchema.pre('save', async function () {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
+
+// One account per Google account (only users who have one take part).
+userSchema.index({ googleId: 1 }, { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } });
+
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+userSchema.plugin(require('../plugins/tenantScope'));
 
 module.exports = mongoose.model('User', userSchema);

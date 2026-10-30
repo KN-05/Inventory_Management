@@ -18,7 +18,7 @@ function SalesHistoryTable({ sales, canCancel, onView, onCancel }) {
   }
 
   return (
-    <table className="data-table">
+    <div className="table-scroll"><table className="data-table">
       <thead>
         <tr>
           <th>Invoice #</th>
@@ -60,7 +60,7 @@ function SalesHistoryTable({ sales, canCancel, onView, onCancel }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 

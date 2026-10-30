@@ -151,7 +151,7 @@ function ProductDetailsModal({ open, product, onClose }) {
         <p className="empty-state">No stock changes recorded for this product yet.</p>
       )}
       {movements && movements.length > 0 && (
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -179,7 +179,7 @@ function ProductDetailsModal({ open, product, onClose }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       <div className="modal-actions" style={{ marginTop: '1.25rem' }}>

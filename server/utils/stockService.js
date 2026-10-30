@@ -29,7 +29,7 @@ async function applyStockChange(productId, delta) {
   const filter = { _id: productId };
   filter.quantity = delta > 0 ? { $lte: MAX_QUANTITY - delta } : { $gte: -delta };
 
-  const updated = await Product.findOneAndUpdate(filter, { $inc: { quantity: delta } }, { new: true });
+  const updated = await Product.findOneAndUpdate(filter, { $inc: { quantity: delta } }, { returnDocument: 'after' });
 
   if (updated) {
     // Keep `status` + stock alerts in sync. save() runs the model's pre/post

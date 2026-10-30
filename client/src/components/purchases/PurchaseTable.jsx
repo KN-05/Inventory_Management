@@ -24,7 +24,7 @@ function PurchaseTable({ purchases, canManage, isAdmin, onView, onEdit, onReceiv
   }
 
   return (
-    <table className="data-table">
+    <div className="table-scroll"><table className="data-table">
       <thead>
         <tr>
           <th>PO Number</th>
@@ -89,7 +89,7 @@ function PurchaseTable({ purchases, canManage, isAdmin, onView, onEdit, onReceiv
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 

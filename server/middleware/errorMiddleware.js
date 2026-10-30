@@ -69,6 +69,8 @@ const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
+    // machine-readable reason the frontend can act on (e.g. SUBSCRIPTION_EXPIRED)
+    ...(err.appCode ? { code: err.appCode } : {}),
     // Only show the stack trace during development, never in production.
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });

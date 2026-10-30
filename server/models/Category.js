@@ -12,7 +12,6 @@ const categorySchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, 'Category name is required'],
-      unique: true,
       trim: true,
     },
     description: {
@@ -33,5 +32,11 @@ const categorySchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Names are unique PER BUSINESS (two businesses may both have "Electronics").
+categorySchema.index({ business: 1, name: 1 }, { unique: true });
+
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+categorySchema.plugin(require('../plugins/tenantScope'));
 
 module.exports = mongoose.model('Category', categorySchema);

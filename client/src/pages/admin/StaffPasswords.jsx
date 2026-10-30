@@ -110,7 +110,7 @@ function StaffPasswords() {
       ) : staff.length === 0 ? (
         <p className="empty-state">No Staff accounts yet.</p>
       ) : (
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead>
             <tr>
               <th>Name</th>
@@ -144,7 +144,7 @@ function StaffPasswords() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       <AnimatedModal open={!!target} onClose={closeModal} maxWidth={420}>

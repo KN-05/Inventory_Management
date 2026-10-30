@@ -48,7 +48,6 @@ const purchaseSchema = new mongoose.Schema(
     purchaseNumber: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -118,8 +117,14 @@ purchaseSchema.statics.buildPurchaseNumberCandidate = function (sequence) {
   return `PO-${year}-${paddedSequence}`;
 };
 
+// Purchase numbers are unique PER BUSINESS.
+purchaseSchema.index({ business: 1, purchaseNumber: 1 }, { unique: true });
+
 // PERFORMANCE: the Purchases list can be filtered by status / payment status.
 purchaseSchema.index({ status: 1, createdAt: -1 });
 purchaseSchema.index({ paymentStatus: 1, createdAt: -1 });
+
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+purchaseSchema.plugin(require('../plugins/tenantScope'));
 
 module.exports = mongoose.model('Purchase', purchaseSchema);

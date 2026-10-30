@@ -70,7 +70,6 @@ const saleSchema = new mongoose.Schema(
     invoiceNumber: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -154,7 +153,13 @@ saleSchema.statics.buildInvoiceNumberCandidate = function (sequence) {
   return `INV-${year}-${paddedSequence}`;
 };
 
+// Invoice numbers are unique PER BUSINESS.
+saleSchema.index({ business: 1, invoiceNumber: 1 }, { unique: true });
+
 // PERFORMANCE: the Sales list can be filtered by status.
 saleSchema.index({ status: 1, createdAt: -1 });
+
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+saleSchema.plugin(require('../plugins/tenantScope'));
 
 module.exports = mongoose.model('Sale', saleSchema);

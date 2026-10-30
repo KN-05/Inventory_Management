@@ -45,7 +45,9 @@ const getUsers = asyncHandler(async (req, res) => {
 // "Only Admin can create Accountant/Manager and Staff accounts."
 // Note: this endpoint deliberately does NOT allow role: 'admin' - an
 // Admin can only be created via the one-time bootstrap registration, or
-// by promoting an existing user's role afterwards (updateUserRole below).
+// Existing accounts cannot be promoted to Admin because that would keep them
+// inside the current business. A separate Admin must create a separate business
+// through the public business sign-up and onboarding flow.
 const createUser = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -136,13 +138,15 @@ const updateUserStatus = asyncHandler(async (req, res) => {
 // @desc   Change a user's role
 // @route  PATCH /api/admin/users/:id/role
 // @access Private (Admin only)
-// @body   { role: 'admin' | 'manager' | 'staff' }
+// @body   { role: 'manager' | 'staff' }
+// Independent Admins must sign up and complete their own business onboarding;
+// promoting a same-business user to Admin would violate tenant separation.
 const updateUserRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
 
-  if (!['admin', 'manager', 'staff'].includes(role)) {
+  if (!['manager', 'staff'].includes(role)) {
     res.status(400);
-    throw new Error("Role must be 'admin', 'manager', or 'staff'");
+    throw new Error("Role must be 'manager' or 'staff'. A separate Admin must create an independent business account through the sign-up and onboarding flow.");
   }
 
   if (req.params.id === String(req.user._id)) {

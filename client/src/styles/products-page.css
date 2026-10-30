@@ -9,7 +9,7 @@
    ========================================================================== */
 .page.products-page {
   width: 100%;
-  max-width: 1600px;
+  max-width: none; /* same full-width container as every other page */
   min-width: 0;
   box-sizing: border-box;
 }
@@ -139,6 +139,30 @@
 
 .products-table .actions-cell {
   white-space: nowrap;
+}
+
+/* The Actions column stays pinned to the right edge while the rest of the
+   table scrolls sideways, so View / Edit / Delete are always reachable.
+   Only on wide screens: the column is ~300px, so on a phone or small tablet
+   it would cover the whole table and hide the product names - there it just
+   scrolls with the rest of the row. */
+@media (min-width: 1100px) {
+  .products-table thead th:last-child,
+  .products-table td.actions-cell {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--color-surface);
+    box-shadow: -1px 0 0 var(--color-border);
+  }
+
+  .products-table thead th:last-child {
+    background: var(--color-bg);
+  }
+
+  .products-table tbody tr:hover td.actions-cell {
+    background: var(--color-primary-bg);
+  }
 }
 
 .products-table .row-actions {

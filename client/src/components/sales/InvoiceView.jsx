@@ -110,7 +110,7 @@ function InvoiceView({ open, sale, onClose }) {
 
         <div className="invoice-table-scroll">
           {hasGst ? (
-            <table className="data-table" style={{ marginTop: '1rem' }}>
+            <div className="table-scroll" style={{ marginTop: '1rem' }}><table className="data-table">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -145,9 +145,9 @@ function InvoiceView({ open, sale, onClose }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
-            <table className="data-table" style={{ marginTop: '1rem' }}>
+            <div className="table-scroll" style={{ marginTop: '1rem' }}><table className="data-table">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -168,7 +168,7 @@ function InvoiceView({ open, sale, onClose }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
 

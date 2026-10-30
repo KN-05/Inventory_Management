@@ -31,4 +31,7 @@ activityLogSchema.index({ createdAt: -1 });
 activityLogSchema.index({ module: 1, createdAt: -1 });
 activityLogSchema.index({ user: 1, createdAt: -1 });
 
+// MULTI-BUSINESS: adds `business` and limits every query to the caller's business.
+activityLogSchema.plugin(require('../plugins/tenantScope'));
+
 module.exports = mongoose.model('ActivityLog', activityLogSchema);
